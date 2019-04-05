@@ -20,4 +20,6 @@ In the Main function, the first little block of code is wrapped in an "OPTIONS" 
 
 The file tlcs_evaluate.py retrieve the neural network saved after the training completed and test it across 5 episodes, then print the results. The file static_evaluate creates a baseline of comparison using a static traffic light system with a fixed phase cycle. However these two files highly depends on what traffic measures you want to extract for the performance evaluation, so perhaphs you may want to write them differently from what I did.
 
+In the "intersection" folder is defined the structure of the environment, created using SUMO NetEdit.
+
 If you need further information, I suggest you to look at my master thesis here: https://www.dropbox.com/s/aqhdp0q6qhpx8q9/780747_Vidali_tesi.pdf?dl=0 or write me an e-mail at info@andreavidali.com.
