@@ -18,6 +18,6 @@ The SimRunner class is used to handle the simulation. Some functions are defined
 The Memory class is used to handle the experience replay algorithm used during the training.
 In the Main function, the first little block of code is wrapped in an "OPTIONS" comment. These are the parameters that I usually change when I wanted to test different agent's hyperparameters and see if that bring to better performance. The rest just start the training and handle this process.
 
-The file tlcs_evaluate.py retrieve the neural network saved after the training completed and test it across 5 episodes, then print the results. The file static_evaluate creates a baseline of comparison using a static traffic light system with a fixed phase cycle.
+The file tlcs_evaluate.py retrieve the neural network saved after the training completed and test it across 5 episodes, then print the results. The file static_evaluate creates a baseline of comparison using a static traffic light system with a fixed phase cycle. However these two files highly depends on what traffic measures you want to extract for the performance evaluation, so perhaphs you may want to write them differently from what I did.
 
-If you need further information, I suggestyou to look at my master thesis here: https://www.dropbox.com/s/aqhdp0q6qhpx8q9/780747_Vidali_tesi.pdf?dl=0 or write me an e-mail at info@andreavidali.com.
+If you need further information, I suggest you to look at my master thesis here: https://www.dropbox.com/s/aqhdp0q6qhpx8q9/780747_Vidali_tesi.pdf?dl=0 or write me an e-mail at info@andreavidali.com.
