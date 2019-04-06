@@ -3,8 +3,11 @@
 I have uploaded this here in order to help anyone that is searching for a good starter point for deep reinforcement learning with SUMO. You may want to take a look at tlcs_train.py and also read the description below. I suggest to not to look at the others files since they are just a way to further evaluate the performance of the agent
 
 Framework: Q-Learning with deep neural network.
+
 Context: traffic signal control of an intersection.
+
 Environment: a 4 way intersection wit 4 incoming lanes per arm.
+
 Versions: Python 3.6, SUMO traffic simulator 1.0.1, tensorflow 1.11.0
 
 Agent ( Traffic Signal Control System - TLCS): the traffic light system that handle the incoming traffic.
