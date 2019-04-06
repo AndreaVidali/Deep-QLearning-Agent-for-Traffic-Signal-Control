@@ -25,4 +25,4 @@ The file tlcs_evaluate.py retrieve the neural network saved after the training c
 
 In the "intersection" folder is defined the structure of the environment, created using SUMO NetEdit.
 
-If you need further information, I suggest you to look at my master thesis here: https://www.dropbox.com/s/aqhdp0q6qhpx8q9/780747_Vidali_tesi.pdf?dl=0 or write me an e-mail at info@andreavidali.com.
+If you need further information, I suggest you to look at my master thesis [here](https://www.dropbox.com/s/aqhdp0q6qhpx8q9/780747_Vidali_tesi.pdf?dl=0) or write me an e-mail at info@andreavidali.com.
