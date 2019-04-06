@@ -19,7 +19,7 @@ The main file for training is tlcs_train.py. It is divided into three classes: M
 The Model class is used to define everything about the deep neural network and it also contains some functions used to train the network and predict the outputs.
 The SimRunner class is used to handle the simulation. Some functions are defined to divide semantically the agent's interactions.
 The Memory class is used to handle the experience replay algorithm used during the training.
-In the Main function, the first little block of code is wrapped in an "OPTIONS" comment. These are the parameters that I usually change when I wanted to test different agent's hyperparameters and see if that bring to better performance. The rest just start the training and handle this process.
+In the Main function, the first little block of code is wrapped in an "OPTIONS" comment. These are the parameters that I usually change when I wanted to test different agent's hyperparameters and see if that bring to better performance. The other code in the Main function just starts the training and handle this process.
 
 The file tlcs_evaluate.py retrieve the neural network saved after the training completed and test it across 5 episodes, then print the results. The file static_evaluate creates a baseline of comparison using a static traffic light system with a fixed phase cycle. However these two files highly depends on what traffic measures you want to extract for the performance evaluation, so perhaphs you may want to write them differently from what I did.
 
