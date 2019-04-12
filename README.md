@@ -1,6 +1,6 @@
 # Deep Q-Learning Agent for Traffic Signal Control
 
-I have uploaded this here in order to help anyone that is searching for a good starter point for deep reinforcement learning with SUMO. You may want to take a look at tlcs_train.py and also read the description below. I suggest to not to look at the others files since they are just a way to further evaluate the performance of the agent
+I have uploaded this here in order to help anyone that is searching for a good starter point for deep reinforcement learning with SUMO. You may want to take a look at **tlcs_train.py** and also read the description below. I suggest to not to look at the others files since they are just a way to further evaluate the performance of the agent
 
 **Framework**: Q-Learning with deep neural network.
 
