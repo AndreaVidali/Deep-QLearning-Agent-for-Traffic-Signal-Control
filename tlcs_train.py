@@ -63,11 +63,11 @@ class Model:
         self._q_s_a = tf.placeholder(shape=[None, self._num_actions], dtype=tf.float32)
 
         # list of nn layers
-        fc1 = tf.layers.dense(self._states, 400, activation=tf.nn.leaky_relu)
-        fc2 = tf.layers.dense(fc1, 400, activation=tf.nn.leaky_relu)
-        fc3 = tf.layers.dense(fc2, 400, activation=tf.nn.leaky_relu)
-        fc4 = tf.layers.dense(fc3, 400, activation=tf.nn.leaky_relu)
-        fc5 = tf.layers.dense(fc4, 400, activation=tf.nn.leaky_relu)
+        fc1 = tf.layers.dense(self._states, 400, activation=tf.nn.relu)
+        fc2 = tf.layers.dense(fc1, 400, activation=tf.nn.relu)
+        fc3 = tf.layers.dense(fc2, 400, activation=tf.nn.relu)
+        fc4 = tf.layers.dense(fc3, 400, activation=tf.nn.relu)
+        fc5 = tf.layers.dense(fc4, 400, activation=tf.nn.relu)
         self._logits = tf.layers.dense(fc5, self._num_actions)
 
         # parameters
