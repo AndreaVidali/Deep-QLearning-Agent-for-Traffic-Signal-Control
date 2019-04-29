@@ -668,7 +668,7 @@ if __name__ == "__main__":
     gamma = 0.75
     batch_size = 100
     memory_size = 50000
-    path = "./model/model_1_5x400_300e_075g/" # nn = 5x400, episodes = 300, gamma = 0.75
+    path = "./model/model_1_5x400_250e_075g/" # nn = 5x400, episodes = 300, gamma = 0.75
     # ----------------------
 
     # attributes of the agent
