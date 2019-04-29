@@ -4,8 +4,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from routes_train import generate_routes_train
-
 import os
 import sys
 import random
@@ -20,7 +18,7 @@ import datetime
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' # to kill warning about tensorflow
 import tensorflow as tf
 
-# phase codes based on xai_tlcs.net.xml
+# phase codes based on tlcs.net.xml
 PHASE_NS_GREEN = 0 # action 0 code 00
 PHASE_NS_YELLOW = 1
 PHASE_NSL_GREEN = 2 # action 1 code 01
@@ -37,7 +35,181 @@ if 'SUMO_HOME' in os.environ:
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
-# CLASS OF THE NEURAL NETWORK
+# generation of routes of cars
+def generate_routefile(seed, max_steps):
+    np.random.seed(seed)  # make tests reproducible
+
+    # initializations
+    low_mode = False
+    standard_mode = False
+    NS_mode = False
+    EW_mode = False
+
+    if seed % 4 == 0: # low density
+        n_cars_generated = 600
+        low_mode = True
+        print("Mode: low")
+        traffic_mode = 1 # used for plotting
+    elif seed % 4 == 1: # high density
+        n_cars_generated = 6000
+        standard_mode = True
+        print("Mode: high")
+        traffic_mode = 2
+    elif seed % 4 == 2: # main source is north/south
+        n_cars_generated = 3000
+        NS_mode = True
+        print("Mode: north-south main")
+        traffic_mode = 3
+    elif seed % 4 == 3:  # main source is east/west
+        n_cars_generated = 3000
+        EW_mode = True
+        print("Mode: east-west main")
+        traffic_mode = 4
+
+    # the generation of cars is distributed according to a weibull distribution
+    timings = np.random.weibull(2, n_cars_generated)
+    timings = np.sort(timings)
+
+    # reshape the distribution to fit the interval 0:max_steps
+    car_gen_steps = []
+    min_old = math.floor(timings[1])
+    max_old = math.ceil(timings[-1])
+    min_new = 0
+    max_new = max_steps
+    for value in timings:
+        car_gen_steps = np.append(car_gen_steps, ((max_new - min_new) / (max_old - min_old)) * (value - max_old) + max_new)
+
+    car_gen_steps = np.rint(car_gen_steps) # round every value to int -> effective steps when a car will be generated
+
+    # produce the file for cars generation, one car per line
+    with open("intersection/tlcs_train.rou.xml", "w") as routes:
+        print("""<routes>
+        <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />
+
+        <route id="W_N" edges="W2TL TL2N"/>
+        <route id="W_E" edges="W2TL TL2E"/>
+        <route id="W_S" edges="W2TL TL2S"/>
+        <route id="N_W" edges="N2TL TL2W"/>
+        <route id="N_E" edges="N2TL TL2E"/>
+        <route id="N_S" edges="N2TL TL2S"/>
+        <route id="E_W" edges="E2TL TL2W"/>
+        <route id="E_N" edges="E2TL TL2N"/>
+        <route id="E_S" edges="E2TL TL2S"/>
+        <route id="S_W" edges="S2TL TL2W"/>
+        <route id="S_N" edges="S2TL TL2N"/>
+        <route id="S_E" edges="S2TL TL2E"/>""", file=routes)
+
+        if standard_mode == True or low_mode == True:
+            for car_counter, step in enumerate(car_gen_steps):
+                straight_or_turn = np.random.uniform()
+                if straight_or_turn < 0.75:  # choose direction: straight or turn - 75% of times the car goes straight
+                    route_straight = np.random.randint(1, 5) # choose a random source & destination
+                    if route_straight == 1:
+                        print('    <vehicle id="W_E_%i" type="standard_car" route="W_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_straight == 2:
+                        print('    <vehicle id="E_W_%i" type="standard_car" route="E_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_straight == 3:
+                        print('    <vehicle id="N_S_%i" type="standard_car" route="N_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    else:
+                        print('    <vehicle id="S_N_%i" type="standard_car" route="S_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                else: # car that turn -25% of the time the car turns
+                    route_turn = np.random.randint(1, 9) # choose random source source & destination
+                    if route_turn == 1:
+                        print('    <vehicle id="W_N_%i" type="standard_car" route="W_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 2:
+                        print('    <vehicle id="W_S_%i" type="standard_car" route="W_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 3:
+                        print('    <vehicle id="N_W_%i" type="standard_car" route="N_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 4:
+                        print('    <vehicle id="N_E_%i" type="standard_car" route="N_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 5:
+                        print('    <vehicle id="E_N_%i" type="standard_car" route="E_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 6:
+                        print('    <vehicle id="E_S_%i" type="standard_car" route="E_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 7:
+                        print('    <vehicle id="S_W_%i" type="standard_car" route="S_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    elif route_turn == 8:
+                        print('    <vehicle id="S_E_%i" type="standard_car" route="S_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+
+        if NS_mode == True:
+            for car_counter, step in enumerate(car_gen_steps):
+                straight_or_turn = np.random.uniform() # car goes straight or turns
+                source = np.random.uniform() # choose the source
+                destination_straight = np.random.uniform() # destination if the car goes straight
+                destination_turn = np.random.randint(1, 5) # destination if the car turns
+                if straight_or_turn < 0.75:
+                    if source < 0.90: # choose source: N S or E W
+                        if destination_straight < 0.5: # choose destination
+                            print('    <vehicle id="N_S_%i" type="standard_car" route="N_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        else:
+                            print('    <vehicle id="S_N_%i" type="standard_car" route="S_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    else: # source: E W
+                        if destination_straight < 0.5: # choose destination
+                            print('    <vehicle id="W_E_%i" type="standard_car" route="W_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        else:
+                            print('    <vehicle id="E_W_%i" type="standard_car" route="E_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                else: # behavior: turn
+                    if source < 0.90: # choose source: N S or E W
+                        if destination_turn == 1: # choose destination
+                            print('    <vehicle id="N_W_%i" type="standard_car" route="N_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 2:
+                            print('    <vehicle id="N_E_%i" type="standard_car" route="N_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 3:
+                            print('    <vehicle id="S_W_%i" type="standard_car" route="S_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 4:
+                            print('    <vehicle id="S_E_%i" type="standard_car" route="S_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    else: # source: E W
+                        if destination_turn == 1: # choose destination
+                            print('    <vehicle id="W_N_%i" type="standard_car" route="W_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 2:
+                            print('    <vehicle id="W_S_%i" type="standard_car" route="W_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 3:
+                            print('    <vehicle id="E_N_%i" type="standard_car" route="E_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 4:
+                            print('    <vehicle id="E_S_%i" type="standard_car" route="E_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+
+        if EW_mode == True:
+            for car_counter, step in enumerate(car_gen_steps):
+                straight_or_turn = np.random.uniform()
+                source = np.random.uniform()
+                destination_straight = np.random.uniform()
+                destination_turn = np.random.randint(1, 5)
+                if straight_or_turn < 0.75: # choose behavior: straight or turn
+                    if source < 0.90: # choose source: N S or E W
+                        if destination_straight < 0.5: # choose destination
+                            print('    <vehicle id="W_E_%i" type="standard_car" route="W_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        else:
+                            print('    <vehicle id="E_W_%i" type="standard_car" route="E_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    else: # source: N S
+                        if destination_straight < 0.5: # choose destination
+                            print('    <vehicle id="N_S_%i" type="standard_car" route="N_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        else:
+                            print('    <vehicle id="S_N_%i" type="standard_car" route="S_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                else: # behavior: turn
+                    if source < 0.90: # choose source: N S or E W
+                        if destination_turn == 1: # choose destination
+                            print('    <vehicle id="W_N_%i" type="standard_car" route="W_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 2:
+                            print('    <vehicle id="W_S_%i" type="standard_car" route="W_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 3:
+                            print('    <vehicle id="E_N_%i" type="standard_car" route="E_N" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 4:
+                            print('    <vehicle id="E_S_%i" type="standard_car" route="E_S" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                    else: # source: N S
+                        if destination_turn == 1: # choose destination
+                            print('    <vehicle id="N_W_%i" type="standard_car" route="N_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 2:
+                            print('    <vehicle id="N_E_%i" type="standard_car" route="N_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 3:
+                            print('    <vehicle id="S_W_%i" type="standard_car" route="S_W" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+                        elif destination_turn == 4:
+                            print('    <vehicle id="S_E_%i" type="standard_car" route="S_E" depart="%s" departLane="random" departSpeed="10" />' % (car_counter, step), file=routes)
+
+        print("</routes>", file=routes)
+
+        return traffic_mode
+
+
 class Model:
     def __init__(self, num_states, num_actions, batch_size):
         self._num_states = num_states
@@ -124,16 +296,20 @@ class Memory:
 
 # HANDLE THE SIMULATION OF THE AGENT
 class SimRunner:
-    def __init__(self, sess, model, memory, green_sec, yellow_sec, gamma, max_steps, sumoCmd):
+    def __init__(self, sess, model, memory, total_episodes, gamma, max_steps, green_duration, yellow_duration, sumoCmd):
         self._sess = sess
         self._model = model
         self._memory = memory
-        self._eps = 0 # controls the explorative/exploitative payoff
-        self._green_duration = green_sec
-        self._yellow_duration = yellow_sec
+        self._total_episodes = total_episodes
         self._gamma = gamma
-        self._max_steps = max_steps
+        self._eps = 0 # controls the explorative/exploitative payoff
+        self._steps = 0
+        self._waiting_times = {}
         self._sumoCmd = sumoCmd
+        self._max_steps = max_steps
+        self._green_duration = green_duration
+        self._yellow_duration = yellow_duration
+        self._sum_intersection_queue = 0
 
         self._reward_store_LOW = []
         self._cumulative_wait_store_LOW = []
@@ -152,88 +328,83 @@ class SimRunner:
         self._avg_intersection_queue_store_EW = []
 
     # THE MAIN FUCNTION WHERE THE SIMULATION HAPPENS
-    def run(self, episode, total_episodes):
+    def run(self, episode):
         # first, generate the route file for this simulation and set up sumo
-        traffic_code = generate_routes_train(episode, self._max_steps)
+        traffic_mode = generate_routefile(episode, self._max_steps)
         traci.start(self._sumoCmd)
 
         # set the epsilon for this episode
-        self._eps = 1.0 - (episode / total_episodes)
+        self._eps = 1.0 - (episode / self._total_episodes)
 
         # inits
         self._steps = 0
-        self._sum_intersection_queue = 0
         tot_neg_reward = 0
-        old_wait_time = 0
-        save = False
+        old_total_wait = 0
+        self._waiting_times = {}
+        self._sum_intersection_queue = 0
 
-        # simulation (self._steps updated in function "simulate")
+        # simulation (self._steps updated in function "_simulate")
         while self._steps < self._max_steps:
-
             # get current state of the intersection
             current_state = self._get_state()
+
+            # calculate reward of previous action: (change in cumulative reward between actions)
+            # waiting time = seconds waited since the car spawn, cumulated for every car in incoming lanes
+            current_total_wait = self._get_waiting_times()
+            reward = old_total_wait - current_total_wait
+
+            # data saving into memory & training - if the sim is just started, there is no old_state
+            if self._steps != 0:
+                self._memory.add_sample((old_state, old_action, reward, current_state))
 
             # choose the action to perform based on the current state
             action = self._choose_action(current_state)
 
-            # if the chosen action is different from the last one, activate the yellow phase
+            # if the chosen action is different from the last one, its time for the yellow phase
             if self._steps != 0 and old_action != action:
                 self._set_yellow_phase(old_action)
-                current_wait_time = self._simulate(self._yellow_duration)
+                self._simulate(self._yellow_duration)
 
             # execute the action selected before
             self._set_green_phase(action)
-            current_wait_time = self._simulate(self._green_duration)
-
-            #  calculate reward
-            reward = old_wait_time - current_wait_time
-
-            # data saving into memory
-            if save == True:
-                self._memory.add_sample((old_state, old_action, reward, current_state))
+            self._simulate(self._green_duration)
 
             # saving the variables for the next step & accumulate reward
             old_state = current_state
             old_action = action
-            old_wait_time = current_wait_time
-            save = True
+            old_total_wait = current_total_wait
             if reward < 0:
                 tot_neg_reward += reward
 
-        self._save_stats(traffic_code, tot_neg_reward)
-
-        print("Total negative reward: {}, Eps: {}".format(tot_neg_reward, self._eps))
+        self._save_stats(traffic_mode, tot_neg_reward)
+        print("Total reward: {}, Eps: {}".format(tot_neg_reward, self._eps))
         traci.close()
 
     # HANDLE THE CORRECT NUMBER OF STEPS TO SIMULATE
     def _simulate(self, steps_todo):
-        intersection_queue, summed_wait = self._get_stats() # init the summed_wait, in order to avoid a null return
         if (self._steps + steps_todo) >= self._max_steps: # do not do more steps than the maximum number of steps
             steps_todo = self._max_steps - self._steps
+        self._steps = self._steps + steps_todo # update the step counter
         while steps_todo > 0:
             traci.simulationStep() # simulate 1 step in sumo
-            self._steps = self._steps + 1
+            self._replay()  # training
             steps_todo -= 1
-            self._replay() # training
-            intersection_queue, summed_wait = self._get_stats()
+            intersection_queue = self._get_stats()
             self._sum_intersection_queue += intersection_queue
-        return summed_wait
 
-    # RETRIEVE THE STATS OF THE SIMULATION FOR ONE SINGLE STEP
-    def _get_stats(self):
-        halt_N = traci.edge.getLastStepHaltingNumber("N2TL") # number of cars in halt in a road
-        halt_S = traci.edge.getLastStepHaltingNumber("S2TL")
-        halt_E = traci.edge.getLastStepHaltingNumber("E2TL")
-        halt_W = traci.edge.getLastStepHaltingNumber("W2TL")
-        intersection_queue = halt_N + halt_S + halt_E + halt_W
-
-        wait_N = traci.edge.getWaitingTime("N2TL") # total waiting times of cars in a road
-        wait_S = traci.edge.getWaitingTime("S2TL")
-        wait_W = traci.edge.getWaitingTime("E2TL")
-        wait_E = traci.edge.getWaitingTime("W2TL")
-        summed_wait = wait_N + wait_S + wait_W + wait_E
-
-        return intersection_queue, summed_wait
+    # RETRIEVE THE WAITING TIME OF EVERY CAR IN THE INCOMING LANES
+    def _get_waiting_times(self):
+        incoming_roads = ["E2TL", "N2TL", "W2TL", "S2TL"]
+        for veh_id in traci.vehicle.getIDList():
+            wait_time_car = traci.vehicle.getAccumulatedWaitingTime(veh_id) # get the waiting time
+            road_id = traci.vehicle.getRoadID(veh_id) # get the road id where the car is
+            if road_id in incoming_roads: # consider only the waiting times of cars in incoming roads
+                self._waiting_times[veh_id] = wait_time_car
+            else: # the car isnt into an incoming road anymore, delete the corresponding waiting time
+                if veh_id in self._waiting_times:
+                    del self._waiting_times[veh_id]
+        total_waiting_time = sum(self._waiting_times.values())
+        return total_waiting_time
 
     # DECIDE WHETER TO PERFORM AN EXPLORATIVE OR EXPLOITATIVE ACTION
     def _choose_action(self, state):
@@ -258,6 +429,15 @@ class SimRunner:
         elif action_number == 3:
             traci.trafficlight.setPhase("TL", PHASE_EWL_GREEN)
 
+    # RETRIEVE THE STATS OF THE SIMULATION FOR ONE SINGLE STEP
+    def _get_stats(self):
+        halt_N = traci.edge.getLastStepHaltingNumber("N2TL")
+        halt_S = traci.edge.getLastStepHaltingNumber("S2TL")
+        halt_E = traci.edge.getLastStepHaltingNumber("E2TL")
+        halt_W = traci.edge.getLastStepHaltingNumber("W2TL")
+        intersection_queue = halt_N + halt_S + halt_E + halt_W
+        return intersection_queue
+
     # RETRIEVE THE STATE OF THE INTERSECTION FROM SUMO
     def _get_state(self):
         state = np.zeros(self._model.num_states)
@@ -265,9 +445,9 @@ class SimRunner:
         for veh_id in traci.vehicle.getIDList():
             lane_pos = traci.vehicle.getLanePosition(veh_id)
             lane_id = traci.vehicle.getLaneID(veh_id)
-            lane_pos = 750 - lane_pos # inversion of lane so if the car is close to TL, lane_pos = 0
-            lane_group = -1 # dummy initialization
-            valid_car = False # flag for not detecting cars that are crossing the intersection or driving away from it
+            lane_pos = 750 - lane_pos # inversion of lane so if it is close to TL, lane_pos = 0
+            lane_group = -1 # just dummy initialization
+            valid_car = False # flag for not detecting cars crossing the intersection or driving away from it
 
             # distance in meters from the TLS -> mapping into cells
             if lane_pos < 7:
@@ -291,7 +471,7 @@ class SimRunner:
             elif lane_pos <= 750:
                 lane_cell = 9
 
-            # in which lane is the car? "x2TL_3" are the "turn left only" lanes
+            # in which lane is the car? _3 are the "turn left only" lanes
             if lane_id == "W2TL_0" or lane_id == "W2TL_1" or lane_id == "W2TL_2":
                 lane_group = 0
             elif lane_id == "W2TL_3":
@@ -324,10 +504,10 @@ class SimRunner:
     # RETRIEVE A GROUP OF SAMPLES AND UPDATE THE Q-LEARNING EQUATION, THEN TRAIN
     def _replay(self):
         batch = self._memory.get_samples(self._model.batch_size) # retrieve a group of samples
-        if len(batch) > 0: # if there is at least 1 sample in the memory
+        if len(batch) > 0:  # if there is at least 1 sample in the memory
             states = np.array([val[0] for val in batch]) # isolate the old states from the batch
             next_states = np.array([val[3] for val in batch]) # isolate the next states from the batch
-            q_s_a = self._model.predict_batch(states, self._sess) # predict Q-values starting from the old states
+            q_s_a = self._model.predict_batch(states, self._sess) # # predict Q-values starting from the old states
             q_s_a_d = self._model.predict_batch(next_states, self._sess) # predict Q-values starting from the next states
 
             # setup training arrays
@@ -344,27 +524,23 @@ class SimRunner:
             self._model.train_batch(self._sess, x, y) # train the NN
 
     # SAVE THE STATS OF THE EPISODE TO PLOT THE GRAPHS AT THE END OF THE SESSION
-    def _save_stats(self, traffic_code, tot_neg_reward): # save the stats for this episode
-        if traffic_code == 1: # data low
+    def _save_stats(self, traffic_mode, tot_neg_reward):
+        if traffic_mode == 1: # data low
             self._reward_store_LOW.append(tot_neg_reward) # how much negative reward in this episode
-            self._cumulative_wait_store_LOW.append(self._sum_intersection_queue) # total number of seconds waited by cars (1 step = 1 second -> 1 car in queue/step = 1 second in queue/step=
+            self._cumulative_wait_store_LOW.append(self._sum_intersection_queue) # total number of seconds waited by cars (1 step = 1 second -> 1 car in queue/step = 1 second in queue/step)
             self._avg_intersection_queue_store_LOW.append(self._sum_intersection_queue / self._max_steps) # average number of queued cars per step, in this episode
-
-        if traffic_code == 2: # data high
+        if traffic_mode == 2: # data high
             self._reward_store_HIGH.append(tot_neg_reward)
             self._cumulative_wait_store_HIGH.append(self._sum_intersection_queue)
             self._avg_intersection_queue_store_HIGH.append(self._sum_intersection_queue / self._max_steps)
-
-        if traffic_code == 3: # data ns
+        if traffic_mode == 3: # data ns
             self._reward_store_NS.append(tot_neg_reward)
             self._cumulative_wait_store_NS.append(self._sum_intersection_queue)
             self._avg_intersection_queue_store_NS.append(self._sum_intersection_queue / self._max_steps)
-
-        if traffic_code == 4: # data ew
+        if traffic_mode == 4: # data ew
             self._reward_store_EW.append(tot_neg_reward)
             self._cumulative_wait_store_EW.append(self._sum_intersection_queue)
             self._avg_intersection_queue_store_EW.append(self._sum_intersection_queue / self._max_steps)
-
 
     @property
     def reward_store_LOW(self):
@@ -431,7 +607,7 @@ def save_graphs(object, total_episodes, mode, plot_path):
         data = object.reward_store_EW
     plt.plot(x, data)
     plt.ylabel("Cumulative negative reward")
-    plt.xlabel("Epoch")
+    plt.xlabel("Episode")
     plt.margins(0)
     min_val = min(data)
     max_val = max(data)
@@ -452,7 +628,7 @@ def save_graphs(object, total_episodes, mode, plot_path):
         data = object.cumulative_wait_store_EW
     plt.plot(x, data)
     plt.ylabel("Cumulative delay (s)")
-    plt.xlabel("Epoch")
+    plt.xlabel("Episode")
     plt.margins(0)
     min_val = min(data)
     max_val = max(data)
@@ -473,7 +649,7 @@ def save_graphs(object, total_episodes, mode, plot_path):
         data = object.avg_intersection_queue_store_EW
     plt.plot(x, data)
     plt.ylabel("Average queue length (vehicles)")
-    plt.xlabel("Epoch")
+    plt.xlabel("Episode")
     plt.margins(0)
     min_val = min(data)
     max_val = max(data)
@@ -486,21 +662,21 @@ def save_graphs(object, total_episodes, mode, plot_path):
 
 if __name__ == "__main__":
 
-    # --- OPTIONS ---
+    # --- TRAINING OPTIONS ---
     gui = False
-    total_episodes = 16
+    total_episodes = 250
+    gamma = 0.75
     batch_size = 100
     memory_size = 50000
-    gamma = 0.75 # future discount
-    path = "./model/model_2_5x400_300e_075g/" # nn = 5x400, episodes = 300, gamma = 0.75
+    path = "./model/model_1_5x400_300e_075g/" # nn = 5x400, episodes = 300, gamma = 0.75
     # ----------------------
 
     # attributes of the agent
     num_states = 80
     num_actions = 4
-    green_sec = 10 # duration of green phase
-    yellow_sec = 4 # duration of yellow phase
-    max_steps = 5400 # seconds - simulation is 1 h 30 min long
+    max_steps = 5400 # seconds = 1 h 30 min each episode
+    green_duration = 10
+    yellow_duration = 4
 
     # sumo mode
     if gui == False:
@@ -511,7 +687,7 @@ if __name__ == "__main__":
     # attributes of the system & inits
     model = Model(num_states, num_actions, batch_size)
     mem = Memory(memory_size)
-    sumoCmd = [sumoBinary, "-c", "intersection/tlcs_config_train.sumocfg", "--no-step-log", "true"]
+    sumoCmd = [sumoBinary, "-c", "intersection/tlcs_config_train.sumocfg", "--no-step-log", "true", "--waiting-time-memory", str(max_steps)]
     saver = tf.train.Saver()
 
     with tf.Session() as sess:
@@ -519,14 +695,14 @@ if __name__ == "__main__":
         print("----- Start time:", datetime.datetime.now())
 
         sess.run(model.var_init) # start tensorflow
-        gr = SimRunner(sess, model, mem, green_sec, yellow_sec, gamma, max_steps, sumoCmd) # init the simulation
+        gr = SimRunner(sess, model, mem, total_episodes, gamma, max_steps, green_duration, yellow_duration, sumoCmd) # init the simulation
         episode = 0
 
         while episode < total_episodes:
-            print('----- Epoch {} of {}'.format(episode+1, total_episodes))
+            print('----- Episode {} of {}'.format(episode+1, total_episodes))
             start = timeit.default_timer()
 
-            gr.run(episode, total_episodes) # run the simulation
+            gr.run(episode) # run the simulation
 
             stop = timeit.default_timer()
             print('Time: ', round(stop - start, 1))
