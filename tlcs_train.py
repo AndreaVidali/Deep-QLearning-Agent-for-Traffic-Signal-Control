@@ -664,7 +664,7 @@ if __name__ == "__main__":
 
     # --- TRAINING OPTIONS ---
     gui = False
-    total_episodes = 250
+    total_episodes = 252 # must be a multiple of 4
     gamma = 0.75
     batch_size = 100
     memory_size = 50000
