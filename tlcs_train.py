@@ -51,17 +51,17 @@ def generate_routefile(seed, max_steps):
         print("Mode: low")
         traffic_mode = 1 # used for plotting
     elif seed % 4 == 1: # high density
-        n_cars_generated = 6000
+        n_cars_generated = 4000
         standard_mode = True
         print("Mode: high")
         traffic_mode = 2
     elif seed % 4 == 2: # main source is north/south
-        n_cars_generated = 3000
+        n_cars_generated = 2000
         NS_mode = True
         print("Mode: north-south main")
         traffic_mode = 3
     elif seed % 4 == 3:  # main source is east/west
-        n_cars_generated = 3000
+        n_cars_generated = 2000
         EW_mode = True
         print("Mode: east-west main")
         traffic_mode = 4
