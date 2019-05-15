@@ -10,7 +10,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 1. Download Anaconda ([official site](https://www.anaconda.com/distribution/#download-section)) and install.
 2. Download SUMO ([official site](https://www.dlr.de/ts/en/desktopdefault.aspx/tabid-9883/16931_read-41000/) and install.
-3. Follow [this](https://towardsdatascience.com/tensorflow-gpu-installation-made-easy-use-conda-instead-of-pip-52e5249374bc) short guide in order to install tensorflow-gpu correctly and problem-free. Basically you need to open Anaconda Prompt for example and type the following commands and that's it:
+3. Follow [this](https://towardsdatascience.com/tensorflow-gpu-installation-made-easy-use-conda-instead-of-pip-52e5249374bc) short guide in order to install tensorflow-gpu correctly and problem-free. Basically the guide tells you to open Anaconda Prompt, or any terminal, and type the following commands:
 ```
 conda create --name tf_gpu
 activate tf_gpu
@@ -21,9 +21,12 @@ I've used the following software versions: Python 3.6, SUMO traffic simulator 1.
 
 ## Running the algorithm
 
-- In order to run the algorithm, you need to run the file **tlcs_main.py** and the agent will start the training. You don't need to open any SUMO software, since everything it is loaded and done in the background. 
+- Now you are ready to run the algorithm. TO do so, you need to run the file **tlcs_main.py** by executing the following simple command on the Anaconda prompt or any other terminal and the agent will start the training:
+'''
+python tlcs_main.py
+'''
 
-If you want to see the training process as it goes, you need to set to *True* the variable *gui* in the *TRAINING OPTIONS*, which is located at line 90 of **tlcs_main.py**. Keep in mind that viewing the simulation is very slow compared to the background training and you also need to close SUMO-GUI every time an episode ends, which is not practical.
+You don't need to open any SUMO software, since everything it is loaded and done in the background. If you want to see the training process as it goes, you need to set to *True* the variable *gui* in the *TRAINING OPTIONS*, which is located at line 90 of **tlcs_main.py**. Keep in mind that viewing the simulation is very slow compared to the background training and you also need to close SUMO-GUI every time an episode ends, which is not practical.
 
 When the agent ends the training, results will be stored under "*./model/model_xxxxx*". Results will include some graphs, the data used to generate the graphs and lastly the saved neural network.
 
