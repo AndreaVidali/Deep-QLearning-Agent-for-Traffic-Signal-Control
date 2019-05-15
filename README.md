@@ -22,9 +22,9 @@ I've used the following software versions: Python 3.6, SUMO traffic simulator 1.
 ## Running the algorithm
 
 - Now you are ready to run the algorithm. TO do so, you need to run the file **tlcs_main.py** by executing the following simple command on the Anaconda prompt or any other terminal and the agent will start the training:
-'''
+```
 python tlcs_main.py
-'''
+```
 
 You don't need to open any SUMO software, since everything it is loaded and done in the background. If you want to see the training process as it goes, you need to set to *True* the variable *gui* in the *TRAINING OPTIONS*, which is located at line 90 of **tlcs_main.py**. Keep in mind that viewing the simulation is very slow compared to the background training and you also need to close SUMO-GUI every time an episode ends, which is not practical.
 
