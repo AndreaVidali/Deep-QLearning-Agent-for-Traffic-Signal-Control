@@ -9,7 +9,7 @@ I have uploaded this here in order to help anyone that is searching for a good s
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. In my opinion, these are the easiest steps to follow in order to be able to run the algorithm starting from scratch. A computer with an NVIDA GPU is strongly recommended.
 
 1. Download Anaconda ([official site](https://www.anaconda.com/distribution/#download-section)) and install.
-2. Download SUMO ([official site](https://www.dlr.de/ts/en/desktopdefault.aspx/tabid-9883/16931_read-41000/) and install.
+2. Download SUMO ([official site](https://www.dlr.de/ts/en/desktopdefault.aspx/tabid-9883/16931_read-41000/)) and install.
 3. Follow [this](https://towardsdatascience.com/tensorflow-gpu-installation-made-easy-use-conda-instead-of-pip-52e5249374bc) short guide in order to install tensorflow-gpu correctly and problem-free. Basically the guide tells you to open Anaconda Prompt, or any terminal, and type the following commands:
 ```
 conda create --name tf_gpu
@@ -21,7 +21,7 @@ I've used the following software versions: Python 3.6, SUMO traffic simulator 1.
 
 ## Running the algorithm
 
-- Now you are ready to run the algorithm. TO do so, you need to run the file **tlcs_main.py** by executing the following simple command on the Anaconda prompt or any other terminal and the agent will start the training:
+- Now you are ready to run the algorithm. To do so, you need to run the file **tlcs_main.py** by executing the following simple command on the Anaconda prompt or any other terminal and the agent will start the training:
 ```
 python tlcs_main.py
 ```
