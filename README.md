@@ -4,7 +4,7 @@ A framework where a deep Q-Learning Reinforcement Learning agent tries to choose
 
 I have uploaded this here in order to help anyone that is searching for a good starter point for deep reinforcement learning with SUMO. This code is extracted from my master thesis and it represents a simplified version of the code used for my thesis work. I hope you can find this repository useful for your project.
 
-## Improved version! (12/01/2020)
+## Improved version - 12 Jan 2020
 
 Changelog:
 - Each traning result is now stored in a folder structure, with each result being numbered with an increasing integer.
