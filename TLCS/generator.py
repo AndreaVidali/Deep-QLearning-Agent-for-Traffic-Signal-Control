@@ -1,14 +1,15 @@
 import numpy as np
 import math
 
-# HANDLE THE GENERATION OF VEHICLES IN ONE EPISODE
 class TrafficGenerator:
-    def __init__(self, max_steps):
-        self._n_cars_generated = 1000  # how many cars per episode
+    def __init__(self, max_steps, n_cars_generated):
+        self._n_cars_generated = n_cars_generated  # how many cars per episode
         self._max_steps = max_steps
 
-    # generation of routes of cars
     def generate_routefile(self, seed):
+        """
+        Generation of the route of every car for one episode
+        """
         np.random.seed(seed)  # make tests reproducible
 
         # the generation of cars is distributed according to a weibull distribution
@@ -27,7 +28,7 @@ class TrafficGenerator:
         car_gen_steps = np.rint(car_gen_steps)  # round every value to int -> effective steps when a car will be generated
 
         # produce the file for cars generation, one car per line
-        with open("intersection/tlcs_train.rou.xml", "w") as routes:
+        with open("intersection/episode_routes.rou.xml", "w") as routes:
             print("""<routes>
             <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />
 

@@ -1,68 +1,113 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'  # kill warning about tensorflow
 import tensorflow as tf
+import numpy as np
+import sys
 
-class Model:
-    def __init__(self, num_states, num_actions, batch_size):
-        self._num_states = num_states
-        self._num_actions = num_actions
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras import losses
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras.models import load_model
+
+
+class TrainModel:
+    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim):
+        self._input_dim = input_dim
+        self._output_dim = output_dim
         self._batch_size = batch_size
+        self._learning_rate = learning_rate
+        self._model = self._build_model(num_layers, width)
 
-        # define the placeholders
-        self._states = None
-        self._actions = None
 
-        # the output operations
-        self._logits = None
-        self._optimizer = None
-        self._var_init = None
+    def _build_model(self, num_layers, width):
+        """
+        Build and compile a fully connected deep neural network
+        """
+        inputs = keras.Input(shape=(self._input_dim,))
+        x = layers.Dense(width, activation='relu')(inputs)
+        for _ in range(num_layers):
+            x = layers.Dense(width, activation='relu')(x)
+        outputs = layers.Dense(self._output_dim, activation='linear')(x)
 
-        # now setup the model
-        self._define_model()
+        model = keras.Model(inputs=inputs, outputs=outputs, name='my_model')
+        model.compile(loss=losses.mean_squared_error, optimizer=Adam(lr=self._learning_rate))
+        return model
+    
 
-    # DEFINE THE STRUCTURE OF THE NEURAL NETWORK
-    def _define_model(self):
-        # placeholders
-        self._states = tf.placeholder(shape=[None, self._num_states], dtype=tf.float32)
-        self._q_s_a = tf.placeholder(shape=[None, self._num_actions], dtype=tf.float32)
+    def predict_one(self, state):
+        """
+        Predict the action values from a single state
+        """
+        state = np.reshape(state, [1, self._input_dim])
+        return self._model.predict(state)
 
-        # list of nn layers
-        fc1 = tf.layers.dense(self._states, 400, activation=tf.nn.relu)
-        fc2 = tf.layers.dense(fc1, 400, activation=tf.nn.relu)
-        fc3 = tf.layers.dense(fc2, 400, activation=tf.nn.relu)
-        fc4 = tf.layers.dense(fc3, 400, activation=tf.nn.relu)
-        fc5 = tf.layers.dense(fc4, 400, activation=tf.nn.relu)
-        self._logits = tf.layers.dense(fc5, self._num_actions)
 
-        # parameters
-        loss = tf.losses.mean_squared_error(self._q_s_a, self._logits)
-        self._optimizer = tf.train.AdamOptimizer().minimize(loss)
-        self._var_init = tf.global_variables_initializer()
+    def predict_batch(self, states):
+        """
+        Predict the action values from a batch of states
+        """
+        return self._model.predict(states)
 
-    # RETURNS THE OUTPUT OF THE NETWORK GIVEN A SINGLE STATE
-    def predict_one(self, state, sess):
-        return sess.run(self._logits, feed_dict={self._states: state.reshape(1, self.num_states)})
 
-    # RETURNS THE OUTPUT OF THE NETWORK GIVEN A BATCH OF STATES
-    def predict_batch(self, states, sess):
-        return sess.run(self._logits, feed_dict={self._states: states})
+    def train_batch(self, states, q_sa):
+        """
+        Train the nn using the updated q-values
+        """
+        self._model.fit(states, q_sa, epochs=1, verbose=0)
 
-    # TRAIN THE NETWORK
-    def train_batch(self, sess, x_batch, y_batch):
-        sess.run(self._optimizer, feed_dict={self._states: x_batch, self._q_s_a: y_batch})
+
+    def save_model(self, path):
+        """
+        Save the current model in the folder as h5 file and a model architecture summary as png
+        """
+        self._model.save(os.path.join(path, 'trained_model.h5'))
+        plot_model(self._model, to_file=os.path.join(path, 'model_structure.png'), show_shapes=True, show_layer_names=True)
+
 
     @property
-    def num_states(self):
-        return self._num_states
+    def input_dim(self):
+        return self._input_dim
+
 
     @property
-    def num_actions(self):
-        return self._num_actions
+    def output_dim(self):
+        return self._output_dim
+
 
     @property
     def batch_size(self):
         return self._batch_size
 
+
+class TestModel:
+    def __init__(self, input_dim, model_path):
+        self._input_dim = input_dim
+        self._model = self._load_my_model(model_path)
+
+
+    def _load_my_model(self, model_folder_path):
+        """
+        Load the model stored in the folder specified by the model number, if it exists
+        """
+        model_file_path = os.path.join(model_folder_path, 'trained_model.h5')
+        
+        if os.path.isfile(model_file_path):
+            loaded_model = load_model(model_file_path)
+            return loaded_model
+        else:
+            sys.exit("Model number not found")
+
+
+    def predict_one(self, state):
+        """
+        Predict the action values from a single state
+        """
+        state = np.reshape(state, [1, self._input_dim])
+        return self._model.predict(state)
+
+
     @property
-    def var_init(self):
-        return self._var_init
+    def input_dim(self):
+        return self._input_dim

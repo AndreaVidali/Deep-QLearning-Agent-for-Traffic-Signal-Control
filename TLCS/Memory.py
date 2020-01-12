@@ -1,20 +1,36 @@
 import random
 
-# HANDLES THE MEMORY
 class Memory:
-    def __init__(self, memory_size):
-        self._memory_size = memory_size
+    def __init__(self, size_max, size_min):
         self._samples = []
+        self._size_max = size_max
+        self._size_min = size_min
 
-    # ADD A SAMPLE INTO THE MEMORY
+
     def add_sample(self, sample):
+        """
+        Add a sample into the memory
+        """
         self._samples.append(sample)
-        if len(self._samples) > self._memory_size:
+        if self._size_now() > self._size_max:
             self._samples.pop(0)  # if the length is greater than the size of memory, remove the oldest element
 
-    # GET n_samples SAMPLES RANDOMLY FROM THE MEMORY
-    def get_samples(self, n_samples):
-        if n_samples > len(self._samples):
-            return random.sample(self._samples, len(self._samples))  # get all the samples
+
+    def get_samples(self, n):
+        """
+        Get n samples randomly from the memory
+        """
+        if self._size_now() < self._size_min:
+            return []
+
+        if n > self._size_now():
+            return random.sample(self._samples, self._size_now())  # get all the samples
         else:
-            return random.sample(self._samples, n_samples)  # get "batch size" number of samples
+            return random.sample(self._samples, n)  # get "batch size" number of samples
+
+
+    def _size_now(self):
+        """
+        Check how full the memory is
+        """
+        return len(self._samples)
