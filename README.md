@@ -31,7 +31,7 @@ activate tf_gpu
 conda install tensorflow-gpu
 ```
 
-I've used the following software versions: Python 3.6, SUMO traffic simulator 1.0.1, tensorflow 1.11.0
+I've used the following software versions: Python 3.7, SUMO traffic simulator 1.2.0, tensorflow 2.0
 
 ## Running the algorithm
 
