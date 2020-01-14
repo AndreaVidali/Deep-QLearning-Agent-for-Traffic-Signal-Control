@@ -4,19 +4,19 @@ A framework where a deep Q-Learning Reinforcement Learning agent tries to choose
 
 I have uploaded this here in order to help anyone that is searching for a good starter point for deep reinforcement learning with SUMO. This code is extracted from my master thesis and it represents a simplified version of the code used for my thesis work. I hope you can find this repository useful for your project.
 
-## Improved version - 12 Jan 2020
+## *Improved version - 12 Jan 2020*
 
-Changelog:
-- Each traning result is now stored in a folder structure, with each result being numbered with an increasing integer.
-- New Test Mode: test the model versions you created by running a test episode with comparable results.
-- Enabled a dynamic creation of the model by specifying, for each training, the width and the depth of the feedforward neural network the is going to be used.
-- The training of the neural network is now executed at the end of each episode, instead of during the episode. This improve the overall speed of the algorithm.
-- The code for the neural network is now written using Keras and Tensorflow 2.0.
-- Added a settigs file (.ini) for both training and testing.
-- Improved the tracking of the durations of both simulation and training of each episode.
-- Added a minimum number of samples required into the memory in order to begin training.
-- Improved the naming and the usage of the variables dedicated to save the stats of the episode.
-- Improved docstrings of functions.
+*Changelog:*
+- *Each traning result is now stored in a folder structure, with each result being numbered with an increasing integer.*
+- *New Test Mode: test the model versions you created by running a test episode with comparable results.*
+- *Enabled a dynamic creation of the model by specifying, for each training, the width and the depth of the feedforward neural network the is going to be used.*
+- *The training of the neural network is now executed at the end of each episode, instead of during the episode. This improve the overall speed of the algorithm.*
+- *The code for the neural network is now written using Keras and Tensorflow 2.0.*
+- *Added a settigs file (.ini) for both training and testing.*
+- *Improved the tracking of the durations of both simulation and training of each episode.*
+- *Added a minimum number of samples required into the memory in order to begin training.*
+- *Improved the naming and the usage of the variables dedicated to save the stats of the episode.*
+- *Improved docstrings of functions.*
 
 ## Getting Started
 
