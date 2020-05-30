@@ -9,14 +9,12 @@ I have uploaded this here to help anyone that is searching for a good starting p
 *Changelog:*
 - *Each training result is now stored in a folder structure, with each result being numbered with an increasing integer.*
 - *New Test Mode: test the model versions you created by running a test episode with comparable results.*
-- *Enabled a dynamic creation of the model by specifying, for each training, the width and the depth of the feedforward neural network the is going to be used.*
+- *Enabled a dynamic creation of the model by specifying, for each training, the width and the depth of the feedforward neural network that is going to be used.*
 - *The training of the neural network is now executed at the end of each episode, instead of during the episode. This improves the overall speed of the algorithm.*
 - *The code for the neural network is now written using Keras and Tensorflow 2.0.*
 - *Added a settings file (.ini) for both training and testing.*
-- *Improved the tracking of the durations of both simulation and training of each episode.*
 - *Added a minimum number of samples required into the memory to begin training.*
-- *Improved the naming and the usage of the variables dedicated to saving the stats of the episode.*
-- *Improved docstrings of functions.*
+- *Improved code readability.*
 
 ## Getting Started
 
