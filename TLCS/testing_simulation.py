@@ -3,6 +3,8 @@ import numpy as np
 import random
 import timeit
 import os
+import collections
+import statistics
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
@@ -44,7 +46,8 @@ class Simulation:
         # inits
         self._step = 0
         self._waiting_times = {}
-        old_total_wait = 0
+        # old_total_wait = 0
+        old_variance = 0
         old_action = -1 # dummy init
 
         while self._step < self._max_steps:
@@ -54,8 +57,10 @@ class Simulation:
 
             # calculate reward of previous action: (change in cumulative waiting time between actions)
             # waiting time = seconds waited by a car since the spawn in the environment, cumulated for every car in incoming lanes
-            current_total_wait = self._collect_waiting_times()
-            reward = old_total_wait - current_total_wait
+            # current_total_wait = self._collect_waiting_times()
+            # reward = old_total_wait - current_total_wait
+            current_variance = self._collect_variance_waiting_times()
+            reward = old_variance - current_variance
 
             # choose the light phase to activate, based on the current state of the intersection
             action = self._choose_action(current_state)
@@ -71,7 +76,8 @@ class Simulation:
 
             # saving variables for later & accumulate reward
             old_action = action
-            old_total_wait = current_total_wait
+            # old_total_wait = current_total_wait
+            old_variance = current_variance
 
             self._reward_episode.append(reward)
 
@@ -114,6 +120,30 @@ class Simulation:
         total_waiting_time = sum(self._waiting_times.values())
         return total_waiting_time
 
+    def _collect_variance_waiting_times(self):
+        """
+        Compute average wait time on a lane-by-lane basis and compute the variance of that
+        """
+        _collect_waiting_times(self)
+
+        incoming_roads = ["E2TL", "N2TL", "W2TL", "S2TL"]        
+        lane_id_map = collections.defaultdict(list)
+        car_list = traci.vehicle.getIDList()
+        
+        for car_id in car_list:
+            road_id = traci.vehicle.getRoadID(car_id)  # get the road id where the car is located
+            
+            if road_id in incoming_roads:
+                wait_time = traci.vehicle.getAccumulatedWaitingTime(car_id)
+                lane_id = traci.vehicle.getLaneID(car_id)
+                lane_id_map[lane_id].append(wait_time)
+        
+        averages = []
+        
+        for lane_id, wait_times in lane_id_map.items():
+            averages.append(sum(wait_times) / len(wait_times))
+        
+        return statistics.variance(averages)
 
     def _choose_action(self, state):
         """
