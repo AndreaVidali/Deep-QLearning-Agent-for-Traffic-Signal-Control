@@ -21,8 +21,8 @@ I've used the following software versions: Python 3.7, SUMO traffic simulator 1.
 
 ## Running the algorithm
 
-- Clone or download the repo.
-- Using the Anaconda prompt or any other terminal, navigate to the root folder and run the file **training_main.py** by executing:
+1. Clone or download the repo.
+2. Using the Anaconda prompt or any other terminal, navigate to the root folder and run the file **training_main.py** by executing:
 ```
 python training_main.py
 ```
