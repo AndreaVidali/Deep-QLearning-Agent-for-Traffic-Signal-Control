@@ -129,3 +129,12 @@ If you need further information about the algorithm, I suggest you open an issue
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
+## Buy me a coffee!
+
+Hi 👋 My name is Andrea.
+
+If this repo helped you in some way and you want to say thanks, consider buying me a coffee!
+
+<a href="https://www.buymeacoffee.com/andreavidali" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+ 
+
