@@ -123,7 +123,7 @@ The settings used during the testing and contained in the file **testing_setting
 
 * **Andrea Vidali** - *University of Milano-Bicocca*
 
-If you need further information about the algorithm, I suggest you open an issue on the issues page or look at my master thesis [here](https://www.dropbox.com/s/aqhdp0q6qhpx8q9/780747_Vidali_tesi.pdf?dl=0).
+If you need further information about the algorithm, I suggest you open an issue on the issues page.
 
 ## License
 
