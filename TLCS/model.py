@@ -56,6 +56,8 @@ class TrainModel:
         Train the nn using the updated q-values
         """
         self._model.fit(states, q_sa, epochs=1, verbose=0)
+        # clear session to avoid slowdown from memory leaks
+        tf.keras.backend.clear_session()
 
 
     def save_model(self, path):
