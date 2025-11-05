@@ -1,0 +1,20 @@
+[project]
+name = "deep-qlearning-agent-for-traffic-signal-control"
+version = "0.1.0"
+description = "Deep Q-Learning agent controlling a single intersection in SUMO."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13,<3.14"
+
+dependencies = [
+    "eclipse-sumo>=1.24.0",
+    "matplotlib>=3.10.7",
+    "mypy>=1.18.2",
+    "numpy>=2.3.4",
+    "ruff>=0.14.3",
+    "torch>=2.9.0",
+    "traci>=1.24.0",
+]
+
+[tool.uv]
+python-preference = "only-managed"
