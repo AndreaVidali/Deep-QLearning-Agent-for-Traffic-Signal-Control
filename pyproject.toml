@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Deep Q-Learning agent controlling a single intersection in SUMO."
 readme = "README.md"
 license = { text = "MIT" }
+authors = [{ name = "Andrea Vidali", email = "andreavidali.me@gmail.com" }]
 requires-python = ">=3.13,<3.14"
 
 dependencies = [
