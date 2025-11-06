@@ -3,6 +3,10 @@ import timeit
 
 import numpy as np
 import traci
+from generator import generate_routefile
+from memory import Memory
+from model import TrainModel
+from rich import print
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
@@ -18,12 +22,11 @@ PHASE_EWL_YELLOW = 7
 class Simulation:
     def __init__(
         self,
-        model,
-        memory,
-        traffic_gen,
+        model: TrainModel,
+        memory: Memory,
         sumo_cmd,
-        gamma,
         max_steps,
+        n_cars_generated,
         green_duration,
         yellow_duration,
         num_states,
@@ -32,19 +35,19 @@ class Simulation:
     ):
         self.model = model
         self.memory = memory
-        self.traffic_gen = traffic_gen
-        self.gamma = gamma
         self.step = 0
         self.sumo_cmd = sumo_cmd
         self.max_steps = max_steps
+        self.n_cars_generated = n_cars_generated
         self.green_duration = green_duration
         self.yellow_duration = yellow_duration
         self.num_states = num_states
         self.num_actions = num_actions
+        self.training_epochs = training_epochs
+
         self.reward_store = []
         self.cumulative_wait_store = []
         self.avg_queue_length_store = []
-        self.training_epochs = training_epochs
 
     def run(self, episode, epsilon):
         """
@@ -53,8 +56,13 @@ class Simulation:
         start_time = timeit.default_timer()
 
         # first, generate the route file for this simulation and set up sumo
-        self.traffic_gen.generate_routefile(seed=episode)
+        generate_routefile(
+            seed=episode,
+            n_cars_generated=self.n_cars_generated,
+            max_steps=self.max_steps,
+        )
         traci.start(self.sumo_cmd)
+
         print("Simulating...")
 
         # inits
@@ -101,18 +109,14 @@ class Simulation:
             if reward < 0:
                 self.sum_neg_reward += reward
 
-        self._save_episode_stats()
-        print("Total reward:", self.sum_neg_reward, "- Epsilon:", round(epsilon, 2))
         traci.close()
+
+        self._save_episode_stats()
+        print(f"Total reward: {self.sum_neg_reward} | Epsilon: {round(epsilon, 2)}")
+
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
-        print("Training...")
-        start_time = timeit.default_timer()
-        for _ in range(self.training_epochs):
-            self._replay()
-        training_time = round(timeit.default_timer() - start_time, 1)
-
-        return simulation_time, training_time
+        return simulation_time
 
     def _simulate(self, steps_todo):
         """
@@ -267,41 +271,6 @@ class Simulation:
 
         return state
 
-    def _replay(self):
-        """
-        Retrieve a group of samples from the memory and for each of them update the learning equation, then train
-        """
-        batch = self.memory.get_samples(self.model.batch_size)
-
-        if len(batch) > 0:  # if the memory is full enough
-            # extract states from the batch
-            states = np.array([val[0] for val in batch])
-
-            # extract next states from the batch
-            next_states = np.array([val[3] for val in batch])
-
-            # predict Q(state), for every sample
-            q_s_a = self.model.predict_batch(states)
-
-            # predict Q(next_state), for every sample
-            q_s_a_d = self.model.predict_batch(next_states)
-
-            # setup training arrays
-            x = np.zeros((len(batch), self.num_states))
-            y = np.zeros((len(batch), self.num_actions))
-
-            for i, b in enumerate(batch):
-                # extract data from one sample
-                state, action, reward, _ = (b[0], b[1], b[2], b[3])
-                # get the Q(state) predicted before
-                current_q = q_s_a[i]
-                # update Q(state, action)
-                current_q[action] = reward + self.gamma * np.amax(q_s_a_d[i])
-                x[i] = state
-                y[i] = current_q  # Q(state) that includes the updated action value
-
-            self.model.train_batch(x, y)  # train the NN
-
     def _save_episode_stats(self):
         """
         Save the stats of the episode to plot the graphs at the end of the session
@@ -314,15 +283,3 @@ class Simulation:
 
         # average number of queued cars per step, in this episode
         self.avg_queue_length_store.append(self.sum_queue_length / self.max_steps)
-
-    @property
-    def reward_store(self):
-        return self.reward_store
-
-    @property
-    def cumulative_wait_store(self):
-        return self.cumulative_wait_store
-
-    @property
-    def avg_queue_length_store(self):
-        return self.avg_queue_length_store

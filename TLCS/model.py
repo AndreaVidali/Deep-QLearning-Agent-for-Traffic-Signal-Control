@@ -87,18 +87,6 @@ class TrainModel:
         model_path = os.path.join(path, "trained_model.pt")
         torch.save(self.model, model_path)
 
-    @property
-    def input_dim(self):
-        return self.input_dim
-
-    @property
-    def output_dim(self):
-        return self.output_dim
-
-    @property
-    def batch_size(self):
-        return self.batch_size
-
 
 class TestModel:
     def __init__(self, input_dim, model_path):
@@ -128,7 +116,3 @@ class TestModel:
             inp = torch.from_numpy(state)
             out = self.model(inp).cpu().numpy()
         return out
-
-    @property
-    def input_dim(self):
-        return self.input_dim

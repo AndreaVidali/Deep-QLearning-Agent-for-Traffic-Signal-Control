@@ -8,10 +8,10 @@ authors = [{ name = "Andrea Vidali", email = "andreavidali.me@gmail.com" }]
 requires-python = ">=3.13,<3.14"
 
 dependencies = [
-    "eclipse-sumo>=1.24.0",
     "matplotlib>=3.10.7",
     "mypy>=1.18.2",
     "numpy>=2.3.4",
+    "rich>=14.2.0",
     "ruff>=0.14.3",
     "torch>=2.9.0",
     "traci>=1.24.0",
@@ -19,3 +19,6 @@ dependencies = [
 
 [tool.uv]
 python-preference = "only-managed"
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]

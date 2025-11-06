@@ -2,6 +2,7 @@ import timeit
 
 import numpy as np
 import traci
+from generator import generate_routefile
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
@@ -21,6 +22,7 @@ class Simulation:
         traffic_gen,
         sumo_cmd,
         max_steps,
+        n_cars_generated,
         green_duration,
         yellow_duration,
         num_states,
@@ -30,9 +32,11 @@ class Simulation:
         self.step = 0
         self.sumo_cmd = sumo_cmd
         self.max_steps = max_steps
+        self.n_cars_generated = n_cars_generated
         self.green_duration = green_duration
         self.yellow_duration = yellow_duration
         self.num_states = num_states
+
         self.reward_episode = []
         self.queue_length_episode = []
 
@@ -43,7 +47,12 @@ class Simulation:
         start_time = timeit.default_timer()
 
         # first, generate the route file for this simulation and set up sumo
-        self.traffic_gen.generate_routefile(seed=episode)
+        generate_routefile(
+            seed=episode,
+            max_steps=self.max_steps,
+            n_cars_generated=self.n_cars_generated,
+        )
+
         traci.start(self.sumo_cmd)
         print("Simulating...")
 
@@ -234,11 +243,3 @@ class Simulation:
                 state[car_position] = 1
 
         return state
-
-    @property
-    def queue_length_episode(self):
-        return self.queue_length_episode
-
-    @property
-    def reward_episode(self):
-        return self.reward_episode

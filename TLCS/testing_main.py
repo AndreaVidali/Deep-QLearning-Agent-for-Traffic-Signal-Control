@@ -1,7 +1,6 @@
 import os
 from shutil import copyfile
 
-from generator import TrafficGenerator
 from model import TestModel
 from testing_simulation import Simulation
 from utils import import_test_configuration, set_sumo, set_test_path
@@ -16,15 +15,13 @@ if __name__ == "__main__":
 
     model = TestModel(input_dim=config["num_states"], model_path=model_path)
 
-    traffic_gen = TrafficGenerator(config["max_steps"], config["n_cars_generated"])
-
     visualization = Visualization(plot_path, dpi=96)
 
     simulation = Simulation(
         model=model,
-        traffic_gen=traffic_gen,
         sumo_cmd=sumo_cmd,
         max_steps=config["max_steps"],
+        n_cars_generated=config["n_cars_generated"],
         green_duration=config["green_duration"],
         yellow_duration=config["yellow_duration"],
         num_states=config["num_states"],
