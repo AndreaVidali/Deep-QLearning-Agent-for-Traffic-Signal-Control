@@ -1,5 +1,5 @@
-import os
 import sys
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -24,9 +24,7 @@ class MLP(nn.Module):
 
 
 class TrainModel:
-    def __init__(
-        self, num_layers, width, batch_size, learning_rate, input_dim, output_dim
-    ):
+    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.batch_size = batch_size
@@ -79,13 +77,12 @@ class TrainModel:
         loss.backward()
         self.optimizer.step()
 
-    def save_model(self, path):
+    def save_model(self, out_path: Path):
         """
         Save the current model as a .pt file and try to export a model graph png (if torchviz is available)
         """
-        os.makedirs(path, exist_ok=True)
-        model_path = os.path.join(path, "trained_model.pt")
-        torch.save(self.model, model_path)
+        out_path.mkdir(parents=True, exist_ok=True)
+        torch.save(self.model, out_path / "trained_model.pt")
 
 
 class TestModel:
@@ -93,13 +90,13 @@ class TestModel:
         self.input_dim = input_dim
         self.model = self._load_my_model(model_path)
 
-    def _load_my_model(self, model_folder_path):
+    def _load_my_model(self, model_folder_path: Path):
         """
         Load the model stored in the folder specified by the model number, if it exists
         """
-        model_file_path = os.path.join(model_folder_path, "trained_model.pt")
+        model_file_path = model_folder_path / "trained_model.pt"
 
-        if os.path.isfile(model_file_path):
+        if model_file_path.exists():
             loaded_model = torch.load(model_file_path, map_location="cpu")
             loaded_model.eval()
             return loaded_model

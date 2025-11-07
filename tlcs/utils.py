@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 from typing import Annotated, Any
@@ -69,19 +68,19 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def import_train_configuration(config_file: str | Path) -> TrainConfig:
+def import_train_configuration(config_file: Path) -> TrainConfig:
     """Load and validate a flat YAML training configuration."""
-    data = _load_yaml(Path(config_file))
+    data = _load_yaml(config_file)
     return TrainConfig.model_validate(data)
 
 
-def import_test_configuration(config_file: str | Path) -> TestConfig:
+def import_test_configuration(config_file: Path) -> TestConfig:
     """Load and validate a flat YAML testing configuration."""
-    data = _load_yaml(Path(config_file))
+    data = _load_yaml(config_file)
     return TestConfig.model_validate(data)
 
 
-def set_sumo(gui: bool, sumocfg_file_name: str, max_steps: int) -> list[str]:
+def set_sumo(gui: bool, sumocfg_file: Path, max_steps: int) -> list[str]:
     """
     Configure the SUMO command-line based on GUI flag and config file name.
     """
@@ -91,15 +90,14 @@ def set_sumo(gui: bool, sumocfg_file_name: str, max_steps: int) -> list[str]:
     sumo_binary = checkBinary("sumo-gui" if gui else "sumo")
 
     # Build the full path to the SUMO configuration
-    sumocfg_path = os.path.join("intersection", sumocfg_file_name)
-    if not os.path.exists(sumocfg_path):
-        raise FileNotFoundError(f"SUMO config not found at '{sumocfg_path}'")
+    if not sumocfg_file.exists():
+        raise FileNotFoundError(f"SUMO config not found at '{sumocfg_file}'")
 
     # Command to run SUMO
     sumo_cmd = [
         sumo_binary,
         "-c",
-        sumocfg_path,
+        str(sumocfg_file),
         "--no-step-log",
         "true",
         "--waiting-time-memory",
@@ -108,16 +106,16 @@ def set_sumo(gui: bool, sumocfg_file_name: str, max_steps: int) -> list[str]:
     return sumo_cmd
 
 
-def set_test_path(models_path_name: str, model_n: int) -> tuple[str, str]:
+def set_test_path(models_path_name: Path, model_n: int) -> tuple[Path, Path]:
     """
     Returns a model path that identifies the model number provided as argument
     and a newly created 'test' path.
     """
-    model_folder_path = os.path.join(os.getcwd(), models_path_name, f"model_{model_n}", "")
+    model_folder_path = Path.cwd() / models_path_name / f"model_{model_n}"
 
-    if os.path.isdir(model_folder_path):
-        plot_path = os.path.join(model_folder_path, "test", "")
-        os.makedirs(os.path.dirname(plot_path), exist_ok=True)
+    if model_folder_path.is_dir():
+        plot_path = model_folder_path / "test"
+        plot_path.mkdir(parents=True, exist_ok=True)
         return model_folder_path, plot_path
     else:
         sys.exit("The model number specified does not exist in the models folder")
