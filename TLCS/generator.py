@@ -1,135 +1,84 @@
-import math
+from pathlib import Path
 
 import numpy as np
 
+ROUTE_FILE = Path("TLCS/intersection/episode_routes.rou.xml")
 
-def generate_routefile(seed, n_cars_generated, max_steps):
+HEADER = """<routes>
+    <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />
+
+    <route id="W_N" edges="W2TL TL2N"/>
+    <route id="W_E" edges="W2TL TL2E"/>
+    <route id="W_S" edges="W2TL TL2S"/>
+    <route id="N_W" edges="N2TL TL2W"/>
+    <route id="N_E" edges="N2TL TL2E"/>
+    <route id="N_S" edges="N2TL TL2S"/>
+    <route id="E_W" edges="E2TL TL2W"/>
+    <route id="E_N" edges="E2TL TL2N"/>
+    <route id="E_S" edges="E2TL TL2S"/>
+    <route id="S_W" edges="S2TL TL2W"/>
+    <route id="S_N" edges="S2TL TL2N"/>
+    <route id="S_E" edges="S2TL TL2E"/>"""
+
+STRAIGHT_ROUTES = ["W_E", "E_W", "N_S", "S_N"]
+TURN_ROUTES = ["W_N", "W_S", "N_W", "N_E", "E_N", "E_S", "S_W", "S_E"]
+
+STRAIGHT_CHANCHE = 0.75
+
+
+def _map_to_interval(values: np.ndarray, new_min: int, new_max: int) -> np.ndarray:
     """
-    Generation of the route of every car for one episode
+    Linearly map an array of values to [new_min, new_max].
+    Falls back to a constant array if the input has zero range.
     """
-    np.random.seed(seed)  # make tests reproducible
+    old_min = float(np.min(values))
+    old_max = float(np.max(values))
+    return np.interp(values, (old_min, old_max), (new_min, new_max))
+
+
+def _get_car_row(route_id: str, car_i: int, step: int) -> str:
+    return f'    <vehicle id="{route_id}_{car_i}" type="standard_car" route="{route_id}" depart="{step}" departLane="random" departSpeed="10" />'
+
+
+def _get_route_id(rng: np.random.Generator, routes: list[str]) -> str:
+    route_idx = int(rng.integers(0, len(routes)))
+    return routes[route_idx]
+
+
+def generate_routefile(seed: int, n_cars_generated: int, max_steps: int) -> None:
+    """
+    Generate a SUMO route file for one episode.
+
+    Cars are generated according to a Weibull distribution and re-scaled to fit
+    [0, max_steps]. About 75% go straight, 25% turn.
+    """
+    if n_cars_generated <= 0:
+        raise ValueError("n_cars_generated must be > 0")
+    if max_steps <= 0:
+        raise ValueError("max_steps must be > 0")
+
+    rng = np.random.default_rng(seed)
 
     # the generation of cars is distributed according to a weibull distribution
-    timings = np.random.weibull(2, n_cars_generated)
-    timings = np.sort(timings)
+    timings = np.sort(rng.weibull(2, size=n_cars_generated).astype(float))
 
     # reshape the distribution to fit the interval 0:max_steps
-    car_gen_steps = []
-    min_old = math.floor(timings[1])
-    max_old = math.ceil(timings[-1])
-    min_new = 0
-    max_new = max_steps
-    for value in timings:
-        car_gen_steps = np.append(
-            car_gen_steps,
-            ((max_new - min_new) / (max_old - min_old)) * (value - max_old) + max_new,
-        )
+    generated_steps = _map_to_interval(timings, new_min=0, new_max=max_steps)
 
     # round every value to int -> effective steps when a car will be generated
-    car_gen_steps = np.rint(car_gen_steps)
+    depart_steps = np.rint(generated_steps).astype(int).tolist()
 
-    # produce the file for cars generation, one car per line
-    with open("TLCS/intersection/episode_routes.rou.xml", "w") as routes:
-        print(
-            """<routes>
-        <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />
+    ROUTE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-        <route id="W_N" edges="W2TL TL2N"/>
-        <route id="W_E" edges="W2TL TL2E"/>
-        <route id="W_S" edges="W2TL TL2S"/>
-        <route id="N_W" edges="N2TL TL2W"/>
-        <route id="N_E" edges="N2TL TL2E"/>
-        <route id="N_S" edges="N2TL TL2S"/>
-        <route id="E_W" edges="E2TL TL2W"/>
-        <route id="E_N" edges="E2TL TL2N"/>
-        <route id="E_S" edges="E2TL TL2S"/>
-        <route id="S_W" edges="S2TL TL2W"/>
-        <route id="S_N" edges="S2TL TL2N"/>
-        <route id="S_E" edges="S2TL TL2E"/>""",
-            file=routes,
-        )
+    with open(ROUTE_FILE, "w", encoding="utf-8") as routes:
+        print(HEADER, file=routes)
 
-        for car_counter, step in enumerate(car_gen_steps):
-            straight_or_turn = np.random.uniform()
-            # choose direction: straight or turn - 75% of times the car goes straight
-            if straight_or_turn < 0.75:
-                # choose a random source & destination
-                route_straight = np.random.randint(1, 5)
+        for car_i, step in enumerate(depart_steps):
+            # 75% straight, 25% turning
+            routes_selected = STRAIGHT_ROUTES if rng.random() < STRAIGHT_CHANCHE else TURN_ROUTES
+            route_id = _get_route_id(rng, routes_selected)
+            car_row = _get_car_row(route_id=route_id, car_i=car_i, step=step)
 
-                if route_straight == 1:
-                    print(
-                        '    <vehicle id="W_E_%i" type="standard_car" route="W_E" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_straight == 2:
-                    print(
-                        '    <vehicle id="E_W_%i" type="standard_car" route="E_W" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_straight == 3:
-                    print(
-                        '    <vehicle id="N_S_%i" type="standard_car" route="N_S" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                else:
-                    print(
-                        '    <vehicle id="S_N_%i" type="standard_car" route="S_N" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-            else:  # car that turn -25% of the time the car turns
-                # choose random source source & destination
-                route_turn = np.random.randint(1, 9)
-                if route_turn == 1:
-                    print(
-                        '    <vehicle id="W_N_%i" type="standard_car" route="W_N" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 2:
-                    print(
-                        '    <vehicle id="W_S_%i" type="standard_car" route="W_S" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 3:
-                    print(
-                        '    <vehicle id="N_W_%i" type="standard_car" route="N_W" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 4:
-                    print(
-                        '    <vehicle id="N_E_%i" type="standard_car" route="N_E" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 5:
-                    print(
-                        '    <vehicle id="E_N_%i" type="standard_car" route="E_N" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 6:
-                    print(
-                        '    <vehicle id="E_S_%i" type="standard_car" route="E_S" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 7:
-                    print(
-                        '    <vehicle id="S_W_%i" type="standard_car" route="S_W" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
-                elif route_turn == 8:
-                    print(
-                        '    <vehicle id="S_E_%i" type="standard_car" route="S_E" depart="%s" departLane="random" departSpeed="10" />'
-                        % (car_counter, step),
-                        file=routes,
-                    )
+            print(car_row, file=routes)
 
         print("</routes>", file=routes)

@@ -1,4 +1,5 @@
 import datetime
+import os
 import timeit
 
 from memory import Memory
@@ -10,58 +11,47 @@ from utils import import_train_configuration, set_sumo
 from visualization import Visualization
 
 
-def main():
-    config = import_train_configuration(config_file="TLCS/training_settings.ini")
-    sumo_cmd = set_sumo(config["gui"], config["sumocfg_file_name"], config["max_steps"])
-    models_path = config["models_path_name"]
+def main() -> None:
+    config = import_train_configuration(config_file="TLCS/training_settings.yaml")
+    sumo_cmd = set_sumo(config.gui, config.sumocfg_file, config.max_steps)
+    os.makedirs(config.models_path, exist_ok=True)
 
     model = TrainModel(
-        config["num_layers"],
-        config["width_layers"],
-        config["batch_size"],
-        config["learning_rate"],
-        input_dim=config["num_states"],
-        output_dim=config["num_actions"],
+        config.num_layers,
+        config.width_layers,
+        config.batch_size,
+        config.learning_rate,
+        input_dim=config.num_states,
+        output_dim=config.num_actions,
     )
 
-    memory = Memory(config["memory_size_max"], config["memory_size_min"])
+    memory = Memory(size_max=config.memory_size_max, size_min=config.memory_size_min)
+    visualization = Visualization(config.models_path, dpi=96)
 
-    visualization = Visualization(models_path, dpi=96)
-
-    simulation = Simulation(
-        model=model,
-        memory=memory,
-        sumo_cmd=sumo_cmd,
-        max_steps=config["max_steps"],
-        n_cars_generated=config["n_cars_generated"],
-        green_duration=config["green_duration"],
-        yellow_duration=config["yellow_duration"],
-        num_states=config["num_states"],
-        num_actions=config["num_actions"],
-        training_epochs=config["training_epochs"],
-    )
+    simulation = Simulation(model=model, memory=memory, sumo_cmd=sumo_cmd, config=config)
 
     episode = 0
     timestamp_start = datetime.datetime.now()
+    tot_episodes = config.total_episodes
 
-    while episode < config["total_episodes"]:
-        print("\n----- Episode", str(episode + 1), "of", str(config["total_episodes"]))
+    while episode < tot_episodes:
+        print(f"\n----- Episode {episode + 1} of {tot_episodes}")
 
         # set the epsilon for this episode according to epsilon-greedy policy
-        epsilon = 1.0 - (episode / config["total_episodes"])
+        epsilon = 1.0 - (episode / tot_episodes)
 
         # run the simulation
         simulation_time = simulation.run(episode, epsilon)
 
         # train the model
         start_time = timeit.default_timer()
-        for _ in range(config["training_epochs"]):
+        for _ in range(config.training_epochs):
             replay(
                 model=model,
                 memory=memory,
-                gamma=config["gamma"],
-                num_states=config["num_states"],
-                num_actions=config["num_actions"],
+                gamma=config.gamma,
+                num_states=config.num_states,
+                num_actions=config.num_actions,
             )
         training_time = round(timeit.default_timer() - start_time, 1)
 
@@ -73,26 +63,27 @@ def main():
             f"Total: {round(simulation_time + training_time, 1)} s",
         )
 
-    model.save_model(models_path)
+    model.save_model(config.models_path)
 
     print("\n----- Start time:", timestamp_start)
     print("----- End time:", datetime.datetime.now())
-    print("----- Session info saved at:", models_path)
+    print("----- Session info saved at:", config.models_path)
 
+    # Use the instance stores (not class attributes)
     visualization.save_data_and_plot(
-        data=Simulation.reward_store,
+        data=simulation.reward_store,
         filename="reward",
         xlabel="Episode",
         ylabel="Cumulative negative reward",
     )
     visualization.save_data_and_plot(
-        data=Simulation.cumulative_wait_store,
+        data=simulation.cumulative_wait_store,
         filename="delay",
         xlabel="Episode",
         ylabel="Cumulative delay (s)",
     )
     visualization.save_data_and_plot(
-        data=Simulation.avg_queue_length_store,
+        data=simulation.avg_queue_length_store,
         filename="queue",
         xlabel="Episode",
         ylabel="Average queue length (vehicles)",

@@ -3,6 +3,7 @@ import timeit
 import numpy as np
 import traci
 from generator import generate_routefile
+from utils import TestConfig
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
@@ -19,23 +20,17 @@ class Simulation:
     def __init__(
         self,
         model,
-        traffic_gen,
-        sumo_cmd,
-        max_steps,
-        n_cars_generated,
-        green_duration,
-        yellow_duration,
-        num_states,
+        sumo_cmd: list[str],
+        config: TestConfig,
     ):
         self.model = model
-        self.traffic_gen = traffic_gen
         self.step = 0
         self.sumo_cmd = sumo_cmd
-        self.max_steps = max_steps
-        self.n_cars_generated = n_cars_generated
-        self.green_duration = green_duration
-        self.yellow_duration = yellow_duration
-        self.num_states = num_states
+        self.max_steps = config.max_steps
+        self.n_cars_generated = config.n_cars_generated
+        self.green_duration = config.green_duration
+        self.yellow_duration = config.yellow_duration
+        self.num_states = config.num_states
 
         self.reward_episode = []
         self.queue_length_episode = []

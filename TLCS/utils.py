@@ -1,116 +1,119 @@
-import configparser
 import os
 import sys
+from pathlib import Path
+from typing import Annotated, Any
 
+import yaml
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt
 from sumolib import checkBinary
 
 
-def import_train_configuration(config_file):
-    """
-    Read the config file regarding the training and import its content
-    """
-    content = configparser.ConfigParser()
-    content.read(config_file)
-    config = {}
-    config["gui"] = content["simulation"].getboolean("gui")
-    config["total_episodes"] = content["simulation"].getint("total_episodes")
-    config["max_steps"] = content["simulation"].getint("max_steps")
-    config["n_cars_generated"] = content["simulation"].getint("n_cars_generated")
-    config["green_duration"] = content["simulation"].getint("green_duration")
-    config["yellow_duration"] = content["simulation"].getint("yellow_duration")
-    config["num_layers"] = content["model"].getint("num_layers")
-    config["width_layers"] = content["model"].getint("width_layers")
-    config["batch_size"] = content["model"].getint("batch_size")
-    config["learning_rate"] = content["model"].getfloat("learning_rate")
-    config["training_epochs"] = content["model"].getint("training_epochs")
-    config["memory_size_min"] = content["memory"].getint("memory_size_min")
-    config["memory_size_max"] = content["memory"].getint("memory_size_max")
-    config["num_states"] = content["agent"].getint("num_states")
-    config["num_actions"] = content["agent"].getint("num_actions")
-    config["gamma"] = content["agent"].getfloat("gamma")
-    config["models_path_name"] = content["dir"]["models_path_name"]
-    config["sumocfg_file_name"] = content["dir"]["sumocfg_file_name"]
-    return config
+class TrainConfig(BaseModel):
+    # simulation
+    gui: bool
+    total_episodes: PositiveInt
+    max_steps: PositiveInt
+    n_cars_generated: PositiveInt
+    green_duration: PositiveInt
+    yellow_duration: PositiveInt
+
+    # model
+    num_layers: PositiveInt
+    width_layers: PositiveInt
+    batch_size: PositiveInt
+    learning_rate: Annotated[float, Field(gt=0)]
+    training_epochs: PositiveInt
+
+    # memory
+    memory_size_min: NonNegativeInt
+    memory_size_max: PositiveInt
+
+    # agent
+    num_states: PositiveInt
+    num_actions: PositiveInt
+    gamma: Annotated[float, Field(ge=0, le=1)]
+
+    # paths
+    models_path: Path
+    sumocfg_file: Path
 
 
-def import_test_configuration(config_file):
-    """
-    Read the config file regarding the testing and import its content
-    """
-    content = configparser.ConfigParser()
-    content.read(config_file)
-    config = {}
-    config["gui"] = content["simulation"].getboolean("gui")
-    config["max_steps"] = content["simulation"].getint("max_steps")
-    config["n_cars_generated"] = content["simulation"].getint("n_cars_generated")
-    config["episode_seed"] = content["simulation"].getint("episode_seed")
-    config["green_duration"] = content["simulation"].getint("green_duration")
-    config["yellow_duration"] = content["simulation"].getint("yellow_duration")
-    config["num_states"] = content["agent"].getint("num_states")
-    config["num_actions"] = content["agent"].getint("num_actions")
-    config["sumocfg_file_name"] = content["dir"]["sumocfg_file_name"]
-    config["models_path_name"] = content["dir"]["models_path_name"]
-    config["model_to_test"] = content["dir"].getint("model_to_test")
-    return config
+class TestConfig(BaseModel):
+    # simulation
+    gui: bool
+    max_steps: PositiveInt
+    n_cars_generated: PositiveInt
+    episode_seed: int
+    yellow_duration: PositiveInt
+    green_duration: PositiveInt
+
+    # agent
+    num_states: PositiveInt
+    num_actions: PositiveInt
+    gamma: Annotated[float, Field(ge=0, le=1)]
+
+    # paths
+    models_path: Path
+    sumocfg_file: Path
+    model_to_test: PositiveInt
 
 
-def set_sumo(gui, sumocfg_file_name, max_steps):
-    """
-    Configure various parameters of SUMO
-    """
-    # sumo things - we need to import python modules from the $SUMO_HOME/tools directory
-    # if "SUMO_HOME" in os.environ:
-    #     tools = os.path.join(os.environ["SUMO_HOME"], "tools")
-    #     sys.path.append(tools)
-    # else:
-    #     sys.exit("please declare environment variable 'SUMO_HOME'")
+def _load_yaml(path: Path) -> dict[str, Any]:
+    """Load a YAML file into a dict."""
+    if not path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {path}")
+    with path.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid YAML format in {path}")
+    return data
 
-    # setting the cmd mode or the visual mode
-    if gui:
-        sumoBinary = checkBinary("sumo-gui")
-    else:
-        sumoBinary = checkBinary("sumo")
 
-    # setting the cmd command to run sumo at simulation time
+def import_train_configuration(config_file: str | Path) -> TrainConfig:
+    """Load and validate a flat YAML training configuration."""
+    data = _load_yaml(Path(config_file))
+    return TrainConfig.model_validate(data)
+
+
+def import_test_configuration(config_file: str | Path) -> TestConfig:
+    """Load and validate a flat YAML testing configuration."""
+    data = _load_yaml(Path(config_file))
+    return TestConfig.model_validate(data)
+
+
+def set_sumo(gui: bool, sumocfg_file_name: str, max_steps: int) -> list[str]:
+    """
+    Configure the SUMO command-line based on GUI flag and config file name.
+    """
+    if max_steps <= 0:
+        raise ValueError("max_steps must be > 0")
+
+    sumo_binary = checkBinary("sumo-gui" if gui else "sumo")
+
+    # Build the full path to the SUMO configuration
+    sumocfg_path = os.path.join("TLCS", "intersection", sumocfg_file_name)
+    if not os.path.exists(sumocfg_path):
+        raise FileNotFoundError(f"SUMO config not found at '{sumocfg_path}'")
+
+    # Command to run SUMO
     sumo_cmd = [
-        sumoBinary,
+        sumo_binary,
         "-c",
-        os.path.join("TLCS/intersection", sumocfg_file_name),
+        sumocfg_path,
         "--no-step-log",
         "true",
         "--waiting-time-memory",
         str(max_steps),
     ]
-
     return sumo_cmd
 
 
-# def set_train_path(models_path_name):
-#     """
-#     Create a new model path with an incremental integer, also considering previously created model paths
-#     """
-#     models_path = os.path.join(os.getcwd(), models_path_name, "")
-#     os.makedirs(os.path.dirname(models_path), exist_ok=True)
-
-#     dir_content = os.listdir(models_path)
-#     if dir_content:
-#         previous_versions = [int(name.split("_")[1]) for name in dir_content]
-#         new_version = str(max(previous_versions) + 1)
-#     else:
-#         new_version = "1"
-
-#     data_path = os.path.join(models_path, "model_" + new_version, "")
-#     os.makedirs(os.path.dirname(data_path), exist_ok=True)
-#     return data_path
-
-
-def set_test_path(models_path_name, model_n):
+def set_test_path(models_path_name: str, model_n: int) -> tuple[str, str]:
     """
-    Returns a model path that identifies the model number provided as argument and a newly created 'test' path
+    Returns a model path that identifies the model number provided as argument
+    and a newly created 'test' path.
     """
-    model_folder_path = os.path.join(
-        os.getcwd(), models_path_name, "model_" + str(model_n), ""
-    )
+    model_folder_path = os.path.join(os.getcwd(), models_path_name, f"model_{model_n}", "")
 
     if os.path.isdir(model_folder_path):
         plot_path = os.path.join(model_folder_path, "test", "")
