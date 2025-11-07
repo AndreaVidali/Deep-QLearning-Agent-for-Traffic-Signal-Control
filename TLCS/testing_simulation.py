@@ -2,8 +2,9 @@ import timeit
 
 import numpy as np
 import traci
-from generator import generate_routefile
-from utils import TestConfig
+
+from tlcs.generator import generate_routefile
+from tlcs.utils import TestConfig
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00

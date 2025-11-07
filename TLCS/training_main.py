@@ -2,13 +2,14 @@ import datetime
 import os
 import timeit
 
-from memory import Memory
-from model import TrainModel
-from model_training import replay
 from rich import print
-from training_simulation import Simulation
-from utils import import_train_configuration, set_sumo
-from visualization import Visualization
+
+from tlcs.memory import Memory
+from tlcs.model import TrainModel
+from tlcs.model_training import replay
+from tlcs.training_simulation import Simulation
+from tlcs.utils import import_train_configuration, set_sumo
+from tlcs.visualization import Visualization
 
 
 def main() -> None:

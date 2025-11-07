@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROUTE_FILE = Path("TLCS/intersection/episode_routes.rou.xml")
+ROUTE_FILE = Path("intersection/episode_routes.rou.xml")
 
 HEADER = """<routes>
     <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />

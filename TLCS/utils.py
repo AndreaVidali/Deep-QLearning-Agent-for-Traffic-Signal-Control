@@ -91,7 +91,7 @@ def set_sumo(gui: bool, sumocfg_file_name: str, max_steps: int) -> list[str]:
     sumo_binary = checkBinary("sumo-gui" if gui else "sumo")
 
     # Build the full path to the SUMO configuration
-    sumocfg_path = os.path.join("TLCS", "intersection", sumocfg_file_name)
+    sumocfg_path = os.path.join("intersection", sumocfg_file_name)
     if not os.path.exists(sumocfg_path):
         raise FileNotFoundError(f"SUMO config not found at '{sumocfg_path}'")
 

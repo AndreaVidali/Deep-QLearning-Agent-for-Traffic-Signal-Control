@@ -1,10 +1,10 @@
 import os
 from shutil import copyfile
 
-from model import TestModel
-from testing_simulation import Simulation
-from utils import import_test_configuration, set_sumo, set_test_path
-from visualization import Visualization
+from tlcs.model import TestModel
+from tlcs.testing_simulation import Simulation
+from tlcs.utils import import_test_configuration, set_sumo, set_test_path
+from tlcs.visualization import Visualization
 
 if __name__ == "__main__":
     config = import_test_configuration(config_file="TLCS/testing_settings.yaml")
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     simulation = Simulation(model=model, sumo_cmd=sumo_cmd, config=config)
 
     print("\n----- Test episode")
-    simulation_time = simulation.run(config["episode_seed"])  # run the simulation
+    simulation_time = simulation.run(config.episode_seed)  # run the simulation
     print("Simulation time:", simulation_time, "s")
 
     print("----- Testing info saved at:", plot_path)

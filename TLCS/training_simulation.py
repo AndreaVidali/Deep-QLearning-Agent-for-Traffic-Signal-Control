@@ -3,11 +3,12 @@ import timeit
 
 import numpy as np
 import traci
-from generator import generate_routefile
-from memory import Memory
-from model import TrainModel
 from rich import print
-from utils import TrainConfig
+
+from tlcs.generator import generate_routefile
+from tlcs.memory import Memory
+from tlcs.model import TrainModel
+from tlcs.utils import TrainConfig
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
