@@ -21,7 +21,7 @@ PHASE_EWL_GREEN = 6  # action 3 code 11
 PHASE_EWL_YELLOW = 7
 
 
-class Simulation:
+class TrainingSimulation:
     def __init__(
         self,
         model: TrainModel,

@@ -17,15 +17,15 @@ dependencies = [
     "ruff>=0.14.3",
     "torch>=2.9.0",
     "traci>=1.24.0",
+    "typer>=0.20.0",
 ]
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.10.0"]
 build-backend = "uv_build"
 
-[tool.uv.build-backend]
-module-name = "tlcs"
-module-root = ""
+[project.scripts]
+tlcs = "tlcs.cli:app"
 
 [tool.ruff]
 line-length = 100

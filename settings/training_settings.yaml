@@ -23,5 +23,4 @@ num_actions: 4
 gamma: 0.75
 
 # paths
-models_path: models
 sumocfg_file: intersection/sumo_config.sumocfg

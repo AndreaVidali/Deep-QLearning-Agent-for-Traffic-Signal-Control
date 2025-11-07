@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -33,7 +32,6 @@ class TrainConfig(BaseModel):
     gamma: Annotated[float, Field(ge=0, le=1)]
 
     # paths
-    models_path: Path
     sumocfg_file: Path
 
 
@@ -52,7 +50,6 @@ class TestConfig(BaseModel):
     gamma: Annotated[float, Field(ge=0, le=1)]
 
     # paths
-    models_path: Path
     sumocfg_file: Path
     model_to_test: PositiveInt
 
@@ -104,18 +101,3 @@ def set_sumo(gui: bool, sumocfg_file: Path, max_steps: int) -> list[str]:
         str(max_steps),
     ]
     return sumo_cmd
-
-
-def set_test_path(models_path_name: Path, model_n: int) -> tuple[Path, Path]:
-    """
-    Returns a model path that identifies the model number provided as argument
-    and a newly created 'test' path.
-    """
-    model_folder_path = Path.cwd() / models_path_name / f"model_{model_n}"
-
-    if model_folder_path.is_dir():
-        plot_path = model_folder_path / "test"
-        plot_path.mkdir(parents=True, exist_ok=True)
-        return model_folder_path, plot_path
-    else:
-        sys.exit("The model number specified does not exist in the models folder")

@@ -1,27 +1,27 @@
 import datetime
 import timeit
 from pathlib import Path
+from shutil import copyfile
 
 from rich import print
 
 from tlcs.memory import Memory
-from tlcs.model import TrainModel
+from tlcs.model import TestModel, TrainModel
 from tlcs.model_training import replay
 from tlcs.plots import save_data_and_plot
-from tlcs.training_simulation import Simulation
-from tlcs.utils import import_train_configuration, set_sumo
+from tlcs.testing_simulation import TestingSimulation
+from tlcs.training_simulation import TrainingSimulation
+from tlcs.utils import import_test_configuration, import_train_configuration, set_sumo
 
-CONFIG_FILE = Path("tlcs/training_settings.yaml")
 
-
-def main() -> None:
-    config = import_train_configuration(CONFIG_FILE)
+def training_session(config_file: Path, out_path: Path) -> None:
+    config = import_train_configuration(config_file)
     sumo_cmd = set_sumo(
         gui=config.gui,
         sumocfg_file=config.sumocfg_file,
         max_steps=config.max_steps,
     )
-    config.models_path.mkdir(parents=True, exist_ok=True)
+    out_path.mkdir(parents=True, exist_ok=True)
 
     model = TrainModel(
         config.num_layers,
@@ -34,7 +34,7 @@ def main() -> None:
 
     memory = Memory(size_max=config.memory_size_max, size_min=config.memory_size_min)
 
-    simulation = Simulation(model=model, memory=memory, sumo_cmd=sumo_cmd, config=config)
+    simulation = TrainingSimulation(model=model, memory=memory, sumo_cmd=sumo_cmd, config=config)
 
     episode = 0
     timestamp_start = datetime.datetime.now()
@@ -69,34 +69,63 @@ def main() -> None:
             f"Total: {round(simulation_time + training_time, 1)} s",
         )
 
-    model.save_model(config.models_path)
+    model.save_model(out_path)
 
     print("\n----- Start time:", timestamp_start)
     print("----- End time:", datetime.datetime.now())
-    print("----- Session info saved at:", config.models_path)
+    print("----- Session info saved at:", out_path)
 
     save_data_and_plot(
         data=simulation.reward_store,
         filename="reward",
         xlabel="Episode",
         ylabel="Cumulative negative reward",
-        out_folder=config.models_path,
+        out_folder=out_path,
     )
     save_data_and_plot(
         data=simulation.cumulative_wait_store,
         filename="delay",
         xlabel="Episode",
         ylabel="Cumulative delay (s)",
-        out_folder=config.models_path,
+        out_folder=out_path,
     )
     save_data_and_plot(
         data=simulation.avg_queue_length_store,
         filename="queue",
         xlabel="Episode",
         ylabel="Average queue length (vehicles)",
-        out_folder=config.models_path,
+        out_folder=out_path,
     )
 
 
-if __name__ == "__main__":
-    main()
+def testing_session(config_file: Path, model_path: Path) -> None:
+    config = import_test_configuration(config_file)
+    sumo_cmd = set_sumo(config.gui, config.sumocfg_file, config.max_steps)
+    tests_path = model_path / "tests"
+
+    model = TestModel(input_dim=config.num_states, model_path=model_path)
+
+    simulation = TestingSimulation(model=model, sumo_cmd=sumo_cmd, config=config)
+
+    print("\n----- Test episode")
+    simulation_time = simulation.run(config.episode_seed)
+    print("Simulation time:", simulation_time, "s")
+
+    print("----- Testing info saved at:", tests_path)
+
+    copyfile(src=config_file, dst=tests_path / config_file)
+
+    save_data_and_plot(
+        data=simulation.reward_episode,
+        filename="reward",
+        xlabel="Action step",
+        ylabel="Reward",
+        out_folder=tests_path,
+    )
+    save_data_and_plot(
+        data=simulation.queue_length_episode,
+        filename="queue",
+        xlabel="Step",
+        ylabel="Queue lenght (vehicles)",
+        out_folder=tests_path,
+    )

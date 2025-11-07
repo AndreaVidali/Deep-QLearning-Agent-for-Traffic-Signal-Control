@@ -17,7 +17,7 @@ PHASE_EWL_GREEN = 6  # action 3 code 11
 PHASE_EWL_YELLOW = 7
 
 
-class Simulation:
+class TestingSimulation:
     def __init__(
         self,
         model,
@@ -33,8 +33,8 @@ class Simulation:
         self.yellow_duration = config.yellow_duration
         self.num_states = config.num_states
 
-        self.reward_episode = []
-        self.queue_length_episode = []
+        self.reward_episode: list[float] = []
+        self.queue_length_episode: list[float] = []
 
     def run(self, episode):
         """
