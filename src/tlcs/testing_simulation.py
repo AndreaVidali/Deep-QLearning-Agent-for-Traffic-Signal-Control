@@ -4,7 +4,8 @@ import numpy as np
 import traci
 
 from tlcs.generator import generate_routefile
-from tlcs.utils import TestConfig
+from tlcs.model import TestModel
+from tlcs.settings import TestingSettings
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
@@ -20,18 +21,17 @@ PHASE_EWL_YELLOW = 7
 class TestingSimulation:
     def __init__(
         self,
-        model,
+        model: TestModel,
         sumo_cmd: list[str],
-        config: TestConfig,
+        settings: TestingSettings,
     ):
         self.model = model
-        self.step = 0
         self.sumo_cmd = sumo_cmd
-        self.max_steps = config.max_steps
-        self.n_cars_generated = config.n_cars_generated
-        self.green_duration = config.green_duration
-        self.yellow_duration = config.yellow_duration
-        self.num_states = config.num_states
+        self.max_steps = settings.max_steps
+        self.n_cars_generated = settings.n_cars_generated
+        self.green_duration = settings.green_duration
+        self.yellow_duration = settings.yellow_duration
+        self.num_states = settings.num_states
 
         self.reward_episode: list[float] = []
         self.queue_length_episode: list[float] = []
@@ -53,8 +53,8 @@ class TestingSimulation:
         print("Simulating...")
 
         # inits
-        self.step = 0
-        self.waiting_times = {}
+        self._reset_episode_vars()
+
         old_total_wait = 0
         old_action = -1  # dummy init
 
@@ -90,6 +90,10 @@ class TestingSimulation:
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
         return simulation_time
+
+    def _reset_episode_vars(self):
+        self.step = 0
+        self.waiting_times = {}
 
     def _simulate(self, steps_todo):
         """

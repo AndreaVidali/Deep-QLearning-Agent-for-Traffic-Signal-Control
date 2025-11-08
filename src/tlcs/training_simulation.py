@@ -8,7 +8,7 @@ from rich import print
 from tlcs.generator import generate_routefile
 from tlcs.memory import Memory
 from tlcs.model import TrainModel
-from tlcs.utils import TrainConfig
+from tlcs.settings import TrainingSettings
 
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
@@ -27,25 +27,22 @@ class TrainingSimulation:
         model: TrainModel,
         memory: Memory,
         sumo_cmd: list[str],
-        config: TrainConfig,
+        settings: TrainingSettings,
     ) -> None:
         self.model = model
         self.memory = memory
-        self.step = 0
         self.sumo_cmd = sumo_cmd
-        self.max_steps = config.max_steps
-        self.n_cars_generated = config.n_cars_generated
-        self.green_duration = config.green_duration
-        self.yellow_duration = config.yellow_duration
-        self.num_states = config.num_states
-        self.num_actions = config.num_actions
-        self.training_epochs = config.training_epochs
+        self.max_steps = settings.max_steps
+        self.n_cars_generated = settings.n_cars_generated
+        self.green_duration = settings.green_duration
+        self.yellow_duration = settings.yellow_duration
+        self.num_states = settings.num_states
+        self.num_actions = settings.num_actions
+        self.training_epochs = settings.training_epochs
 
         self.reward_store: list[float] = []
         self.cumulative_wait_store: list[float] = []
         self.avg_queue_length_store: list[float] = []
-
-        self.waiting_times: dict[str, float] = {}
 
     def run(self, episode: int, epsilon: float) -> float:
         """
@@ -64,12 +61,8 @@ class TrainingSimulation:
 
         print("Simulating...")
 
-        # inits
-        self.step = 0
-        self.waiting_times.clear()
-        self.sum_neg_reward = 0.0
-        self.sum_queue_length = 0
-        self.sum_waiting_time = 0
+        self._reset_episode_vars()
+
         old_total_wait = 0.0
         old_state: np.ndarray | int = -1
         old_action = -1
@@ -114,6 +107,13 @@ class TrainingSimulation:
 
         simulation_time = round(timeit.default_timer() - start_time, 1)
         return simulation_time
+
+    def _reset_episode_vars(self):
+        self.step = 0
+        self.waiting_times = {}
+        self.sum_neg_reward = 0.0
+        self.sum_waiting_time = 0
+        self.sum_queue_length = 0
 
     def _simulate(self, steps_todo: int) -> None:
         """Execute steps in SUMO while gathering statistics."""

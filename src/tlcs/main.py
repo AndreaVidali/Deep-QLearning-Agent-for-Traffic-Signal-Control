@@ -11,34 +11,39 @@ from tlcs.model_training import replay
 from tlcs.plots import save_data_and_plot
 from tlcs.testing_simulation import TestingSimulation
 from tlcs.training_simulation import TrainingSimulation
-from tlcs.utils import import_test_configuration, import_train_configuration, set_sumo
+from tlcs.utils import load_testing_settings, load_training_settings, set_sumo
 
 
-def training_session(config_file: Path, out_path: Path) -> None:
-    config = import_train_configuration(config_file)
+def training_session(settings_file: Path, out_path: Path) -> None:
+    settings = load_training_settings(settings_file)
     sumo_cmd = set_sumo(
-        gui=config.gui,
-        sumocfg_file=config.sumocfg_file,
-        max_steps=config.max_steps,
+        gui=settings.gui,
+        sumocfg_file=settings.sumocfg_file,
+        max_steps=settings.max_steps,
     )
     out_path.mkdir(parents=True, exist_ok=True)
 
     model = TrainModel(
-        config.num_layers,
-        config.width_layers,
-        config.batch_size,
-        config.learning_rate,
-        input_dim=config.num_states,
-        output_dim=config.num_actions,
+        settings.num_layers,
+        settings.width_layers,
+        settings.batch_size,
+        settings.learning_rate,
+        input_dim=settings.num_states,
+        output_dim=settings.num_actions,
     )
 
-    memory = Memory(size_max=config.memory_size_max, size_min=config.memory_size_min)
+    memory = Memory(size_max=settings.memory_size_max, size_min=settings.memory_size_min)
 
-    simulation = TrainingSimulation(model=model, memory=memory, sumo_cmd=sumo_cmd, config=config)
+    simulation = TrainingSimulation(
+        model=model,
+        memory=memory,
+        sumo_cmd=sumo_cmd,
+        settings=settings,
+    )
 
     episode = 0
     timestamp_start = datetime.datetime.now()
-    tot_episodes = config.total_episodes
+    tot_episodes = settings.total_episodes
 
     while episode < tot_episodes:
         print(f"\n----- Episode {episode + 1} of {tot_episodes}")
@@ -51,13 +56,13 @@ def training_session(config_file: Path, out_path: Path) -> None:
 
         # train the model
         start_time = timeit.default_timer()
-        for _ in range(config.training_epochs):
+        for _ in range(settings.training_epochs):
             replay(
                 model=model,
                 memory=memory,
-                gamma=config.gamma,
-                num_states=config.num_states,
-                num_actions=config.num_actions,
+                gamma=settings.gamma,
+                num_states=settings.num_states,
+                num_actions=settings.num_actions,
             )
         training_time = round(timeit.default_timer() - start_time, 1)
 
@@ -74,6 +79,8 @@ def training_session(config_file: Path, out_path: Path) -> None:
     print("\n----- Start time:", timestamp_start)
     print("----- End time:", datetime.datetime.now())
     print("----- Session info saved at:", out_path)
+
+    copyfile(src=settings_file, dst=out_path / settings_file)
 
     save_data_and_plot(
         data=simulation.reward_store,
@@ -98,22 +105,22 @@ def training_session(config_file: Path, out_path: Path) -> None:
     )
 
 
-def testing_session(config_file: Path, model_path: Path) -> None:
-    config = import_test_configuration(config_file)
-    sumo_cmd = set_sumo(config.gui, config.sumocfg_file, config.max_steps)
+def testing_session(settings_file: Path, model_path: Path) -> None:
+    settings = load_testing_settings(settings_file)
+    sumo_cmd = set_sumo(settings.gui, settings.sumocfg_file, settings.max_steps)
     tests_path = model_path / "tests"
 
-    model = TestModel(input_dim=config.num_states, model_path=model_path)
+    model = TestModel(input_dim=settings.num_states, model_path=model_path)
 
-    simulation = TestingSimulation(model=model, sumo_cmd=sumo_cmd, config=config)
+    simulation = TestingSimulation(model=model, sumo_cmd=sumo_cmd, settings=settings)
 
     print("\n----- Test episode")
-    simulation_time = simulation.run(config.episode_seed)
+    simulation_time = simulation.run(settings.episode_seed)
     print("Simulation time:", simulation_time, "s")
 
     print("----- Testing info saved at:", tests_path)
 
-    copyfile(src=config_file, dst=tests_path / config_file)
+    copyfile(src=settings_file, dst=tests_path / settings_file)
 
     save_data_and_plot(
         data=simulation.reward_episode,

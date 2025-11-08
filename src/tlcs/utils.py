@@ -1,63 +1,16 @@
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt
 from sumolib import checkBinary
 
-
-class TrainConfig(BaseModel):
-    # simulation
-    gui: bool
-    total_episodes: PositiveInt
-    max_steps: PositiveInt
-    n_cars_generated: PositiveInt
-    green_duration: PositiveInt
-    yellow_duration: PositiveInt
-
-    # model
-    num_layers: PositiveInt
-    width_layers: PositiveInt
-    batch_size: PositiveInt
-    learning_rate: Annotated[float, Field(gt=0)]
-    training_epochs: PositiveInt
-
-    # memory
-    memory_size_min: NonNegativeInt
-    memory_size_max: PositiveInt
-
-    # agent
-    num_states: PositiveInt
-    num_actions: PositiveInt
-    gamma: Annotated[float, Field(ge=0, le=1)]
-
-    # paths
-    sumocfg_file: Path
+from tlcs.settings import TestingSettings, TrainingSettings
 
 
-class TestConfig(BaseModel):
-    # simulation
-    gui: bool
-    max_steps: PositiveInt
-    n_cars_generated: PositiveInt
-    episode_seed: int
-    yellow_duration: PositiveInt
-    green_duration: PositiveInt
-
-    # agent
-    num_states: PositiveInt
-    num_actions: PositiveInt
-    gamma: Annotated[float, Field(ge=0, le=1)]
-
-    # paths
-    sumocfg_file: Path
-    model_to_test: PositiveInt
-
-
-def _load_yaml(path: Path) -> dict[str, Any]:
+def load_yaml(path: Path) -> dict[str, Any]:
     """Load a YAML file into a dict."""
     if not path.exists():
-        raise FileNotFoundError(f"Configuration file not found: {path}")
+        raise FileNotFoundError(f"File not found: {path}")
     with path.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     if not isinstance(data, dict):
@@ -65,16 +18,16 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def import_train_configuration(config_file: Path) -> TrainConfig:
-    """Load and validate a flat YAML training configuration."""
-    data = _load_yaml(config_file)
-    return TrainConfig.model_validate(data)
+def load_training_settings(settings_file: Path) -> TrainingSettings:
+    """Load and validate a YAML training settings file."""
+    data = load_yaml(settings_file)
+    return TrainingSettings.model_validate(data)
 
 
-def import_test_configuration(config_file: Path) -> TestConfig:
-    """Load and validate a flat YAML testing configuration."""
-    data = _load_yaml(config_file)
-    return TestConfig.model_validate(data)
+def load_testing_settings(settings_file: Path) -> TestingSettings:
+    """Load and validate a YAML testing settings file."""
+    data = load_yaml(settings_file)
+    return TestingSettings.model_validate(data)
 
 
 def set_sumo(gui: bool, sumocfg_file: Path, max_steps: int) -> list[str]:
