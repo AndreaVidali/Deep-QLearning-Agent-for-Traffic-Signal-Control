@@ -1,18 +1,13 @@
 import random
 from collections import deque
-from typing import Any, Deque
+from typing import Any
 
 
 class Memory:
     """Replay memory with a bounded size and a minimum warmup threshold."""
 
     def __init__(self, size_max: int, size_min: int) -> None:
-        if size_max <= 0:
-            raise ValueError("size_max must be > 0")
-        if not (0 <= size_min <= size_max):
-            raise ValueError("size_min must be between 0 and size_max")
-
-        self.samples: Deque = deque(maxlen=size_max)
+        self.samples: deque = deque(maxlen=size_max)
         self.size_max = size_max
         self.size_min = size_min
 

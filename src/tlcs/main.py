@@ -1,103 +1,122 @@
-import datetime
-import timeit
+from datetime import datetime
 from pathlib import Path
 from shutil import copyfile
 
-from rich import print
-
+from tlcs.agent import Agent
+from tlcs.constants import TESTING_SETTINGS_FILE, TRAINING_SETTINGS_FILE
+from tlcs.env import Environment, EnvStats
+from tlcs.episode import Record, run_episode
 from tlcs.memory import Memory
-from tlcs.model import TestModel, TrainModel
-from tlcs.model_training import replay
 from tlcs.plots import save_data_and_plot
-from tlcs.testing_simulation import TestingSimulation
-from tlcs.training_simulation import TrainingSimulation
-from tlcs.utils import load_testing_settings, load_training_settings, set_sumo
+from tlcs.settings import load_testing_settings, load_training_settings
 
 
-def training_session(settings_file: Path, out_path: Path) -> None:
+def add_experience_to_memory(memory: Memory, history: list[Record]) -> None:
+    for i in range(len(history) - 1):
+        s = history[i].state
+        a = history[i].action
+        r = history[i].reward
+        s_next = history[i + 1].state
+        memory.add_sample((s, a, r, s_next))
+
+
+def update_training_stats(
+    episode_history: list[Record],
+    env_stats: list[EnvStats],
+    max_steps: int,
+    training_stats: dict,
+):
+    # accumulate only negative rewards for clearer trend
+    sum_neg_reward = sum([record.reward for record in episode_history if record.reward < 0])
+    training_stats["sum_neg_reward"].append(sum_neg_reward)
+
+    sum_queue_length = sum([el.queue_length for el in env_stats])
+    training_stats["avg_queue_length"].append(round(sum_queue_length / max_steps, 1))
+
+    # 1 car in queue for 1 step == 1 second of waiting time
+    training_stats["cumulative_wait"].append(sum_queue_length)
+
+    return training_stats
+
+
+def training_session(settings_file: Path, out_path: Path):
     settings = load_training_settings(settings_file)
-    sumo_cmd = set_sumo(
-        gui=settings.gui,
-        sumocfg_file=settings.sumocfg_file,
-        max_steps=settings.max_steps,
-    )
-    out_path.mkdir(parents=True, exist_ok=True)
-
-    model = TrainModel(
-        settings.num_layers,
-        settings.width_layers,
-        settings.batch_size,
-        settings.learning_rate,
-        input_dim=settings.num_states,
-        output_dim=settings.num_actions,
-    )
 
     memory = Memory(size_max=settings.memory_size_max, size_min=settings.memory_size_min)
 
-    simulation = TrainingSimulation(
-        model=model,
-        memory=memory,
-        sumo_cmd=sumo_cmd,
-        settings=settings,
-    )
+    agent = Agent(settings=settings)
 
     episode = 0
-    timestamp_start = datetime.datetime.now()
+    timestamp_start = datetime.now()
     tot_episodes = settings.total_episodes
+
+    training_stats = {  # TODO use better struct
+        "sum_neg_reward": [],
+        "cumulative_wait": [],
+        "avg_queue_length": [],
+    }
 
     while episode < tot_episodes:
         print(f"\n----- Episode {episode + 1} of {tot_episodes}")
 
-        # set the epsilon for this episode according to epsilon-greedy policy
-        epsilon = 1.0 - (episode / tot_episodes)
+        new_epsilon = round(1.0 - (episode / tot_episodes), 2)
+        agent.set_epsilon(new_epsilon)
 
-        # run the simulation
-        simulation_time = simulation.run(episode, epsilon)
+        env = Environment(
+            state_size=settings.state_size,
+            n_cars_generated=settings.n_cars_generated,
+            max_steps=settings.max_steps,
+            yellow_duration=settings.yellow_duration,
+            green_duration=settings.green_duration,
+            gui=settings.gui,
+            sumocfg_file=settings.sumocfg_file,
+        )
 
-        # train the model
-        start_time = timeit.default_timer()
-        for _ in range(settings.training_epochs):
-            replay(
-                model=model,
-                memory=memory,
-                gamma=settings.gamma,
-                num_states=settings.num_states,
-                num_actions=settings.num_actions,
-            )
-        training_time = round(timeit.default_timer() - start_time, 1)
+        episode_history, env_stats = run_episode(env=env, agent=agent, seed=episode)
+
+        add_experience_to_memory(memory=memory, history=episode_history)
+
+        agent.replay(memory=memory, gamma=settings.gamma)
+
+        training_stats = update_training_stats(
+            episode_history=episode_history,
+            env_stats=env_stats,
+            max_steps=settings.max_steps,
+            training_stats=training_stats,
+        )
+
+        print(f"Epsilon: {agent.epsilon}")
+        print(f"Reward: {training_stats['sum_neg_reward'][episode]}")
+        print(f"Cumulative wait: {training_stats['cumulative_wait'][episode]}")
+        print(f"Avg queue: {training_stats['avg_queue_length'][episode]}")
 
         episode += 1
 
-        print(
-            f"Simulation time: {simulation_time} s | "
-            f"Training time: {training_time} s | "
-            f"Total: {round(simulation_time + training_time, 1)} s",
-        )
-
-    model.save_model(out_path)
+    out_path.mkdir(parents=True, exist_ok=True)
+    agent.save_model(out_path)
 
     print("\n----- Start time:", timestamp_start)
-    print("----- End time:", datetime.datetime.now())
+    print("----- End time:", datetime.now())
     print("----- Session info saved at:", out_path)
 
-    copyfile(src=settings_file, dst=out_path / settings_file)
+    copyfile(src=settings_file, dst=out_path / TRAINING_SETTINGS_FILE)
 
     save_data_and_plot(
-        data=simulation.reward_store,
+        data=training_stats["sum_neg_reward"],
         filename="reward",
         xlabel="Episode",
         ylabel="Cumulative negative reward",
         out_folder=out_path,
     )
     save_data_and_plot(
-        data=simulation.cumulative_wait_store,
+        data=training_stats["cumulative_wait"],
         filename="delay",
         xlabel="Episode",
         ylabel="Cumulative delay (s)",
         out_folder=out_path,
     )
     save_data_and_plot(
-        data=simulation.avg_queue_length_store,
+        data=training_stats["avg_queue_length"],
         filename="queue",
         xlabel="Episode",
         ylabel="Average queue length (vehicles)",
@@ -106,33 +125,53 @@ def training_session(settings_file: Path, out_path: Path) -> None:
 
 
 def testing_session(settings_file: Path, model_path: Path) -> None:
+    """Load a trained agent from model_path and run a single testing episode."""
     settings = load_testing_settings(settings_file)
-    sumo_cmd = set_sumo(settings.gui, settings.sumocfg_file, settings.max_steps)
-    tests_path = model_path / "tests"
 
-    model = TestModel(input_dim=settings.num_states, model_path=model_path)
+    agent = Agent(
+        settings=load_training_settings(model_path / TRAINING_SETTINGS_FILE),
+        epsilon=0,
+        model_path=model_path,
+    )
 
-    simulation = TestingSimulation(model=model, sumo_cmd=sumo_cmd, settings=settings)
+    env = Environment(
+        state_size=settings.state_size,
+        n_cars_generated=settings.n_cars_generated,
+        max_steps=settings.max_steps,
+        yellow_duration=settings.yellow_duration,
+        green_duration=settings.green_duration,
+        gui=settings.gui,
+        sumocfg_file=settings.sumocfg_file,
+    )
 
-    print("\n----- Test episode")
-    simulation_time = simulation.run(settings.episode_seed)
-    print("Simulation time:", simulation_time, "s")
+    episode_history, env_stats = run_episode(env=env, agent=agent, seed=settings.episode_seed)
+    testing_stats = {"reward": [], "queue_length": []}  # TODO use better struct
 
-    print("----- Testing info saved at:", tests_path)
+    for record in episode_history:
+        testing_stats["reward"].append(record.reward)
 
-    copyfile(src=settings_file, dst=tests_path / settings_file)
+    for stats in env_stats:
+        testing_stats["queue_length"].append(stats.queue_length)
+
+    # TODO enable multiple tests, let user define name, check for existenve ena overwrite
+    test_path = model_path / "test"
+    test_path.mkdir(parents=True, exist_ok=True)
+
+    copyfile(src=settings_file, dst=test_path / TESTING_SETTINGS_FILE)
 
     save_data_and_plot(
-        data=simulation.reward_episode,
+        data=testing_stats["reward"],
         filename="reward",
         xlabel="Action step",
         ylabel="Reward",
-        out_folder=tests_path,
+        out_folder=test_path,
     )
     save_data_and_plot(
-        data=simulation.queue_length_episode,
+        data=testing_stats["queue_length"],
         filename="queue",
         xlabel="Step",
-        ylabel="Queue lenght (vehicles)",
-        out_folder=tests_path,
+        ylabel="Queue length (vehicles)",
+        out_folder=test_path,
     )
+
+    print("----- Testing results saved at:", test_path)

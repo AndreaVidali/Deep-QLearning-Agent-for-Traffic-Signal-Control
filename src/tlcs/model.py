@@ -1,10 +1,10 @@
-import sys
 from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn, optim
+
+from tlcs.constants import MODEL_FILE
 
 
 class MLP(nn.Module):
@@ -23,93 +23,63 @@ class MLP(nn.Module):
         return self.net(x)
 
 
-class TrainModel:
-    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim):
-        self.input_dim = input_dim
-        self.output_dim = output_dim
+class Model:
+    def __init__(
+        self,
+        num_layers,
+        width,
+        batch_size,
+        learning_rate,
+        input_dim,
+        output_dim,
+        model_path: Path | None = None,
+    ):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
-        self.model = self._build_model(num_layers, width)
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+        if model_path and (model_path / MODEL_FILE).exists():
+            print("Loading new model for the Agent")
+            model_file = model_path / MODEL_FILE
+            self.model = self.load_model(model_file)
+        else:
+            print("Creating new model for the Agent")
+            self.model = MLP(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                num_layers=num_layers,
+                width=width,
+            )
+
         self.loss_fn = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
-    def _build_model(self, num_layers, width):
-        """
-        Build a fully connected deep neural network
-        """
-        return MLP(self.input_dim, self.output_dim, num_layers, width)
-
     def predict_one(self, state):
-        """
-        Predict the action values from a single state
-        """
         self.model.eval()
         with torch.no_grad():
             state = np.reshape(state, [1, self.input_dim]).astype(np.float32)
-            inp = torch.from_numpy(state)
-            out = self.model(inp).cpu().numpy()
-        return out
+            return self.model(torch.from_numpy(state)).cpu().numpy()
 
     def predict_batch(self, states):
-        """
-        Predict the action values from a batch of states
-        """
         self.model.eval()
         with torch.no_grad():
             states = np.asarray(states, dtype=np.float32)
-            inp = torch.from_numpy(states)
-            out = self.model(inp).cpu().numpy()
-        return out
+            return self.model(torch.from_numpy(states)).cpu().numpy()
 
     def train_batch(self, states, q_sa):
-        """
-        Train the nn using the updated q-values (one epoch over the given batch)
-        """
         self.model.train()
-        states = np.asarray(states, dtype=np.float32)
-        q_sa = np.asarray(q_sa, dtype=np.float32)
-        inp = torch.from_numpy(states)
-        tgt = torch.from_numpy(q_sa)
+        states = torch.from_numpy(np.asarray(states, np.float32))
+        q_sa = torch.from_numpy(np.asarray(q_sa, np.float32))
 
         self.optimizer.zero_grad()
-        pred = self.model(inp)
-        loss = self.loss_fn(pred, tgt)
+        loss = self.loss_fn(self.model(states), q_sa)
         loss.backward()
         self.optimizer.step()
 
     def save_model(self, out_path: Path):
-        """
-        Save the current model as a .pt file and try to export a model graph png (if torchviz is available)
-        """
         out_path.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model, out_path / "trained_model.pt")
+        torch.save(self.model, out_path / MODEL_FILE)
 
-
-class TestModel:
-    def __init__(self, input_dim, model_path):
-        self.input_dim = input_dim
-        self.model = self._load_my_model(model_path)
-
-    def _load_my_model(self, model_folder_path: Path):
-        """
-        Load the model stored in the folder specified by the model number, if it exists
-        """
-        model_file_path = model_folder_path / "trained_model.pt"
-
-        if model_file_path.exists():
-            loaded_model = torch.load(model_file_path, map_location="cpu")
-            loaded_model.eval()
-            return loaded_model
-        else:
-            sys.exit("Model number not found")
-
-    def predict_one(self, state):
-        """
-        Predict the action values from a single state
-        """
-        self.model.eval()
-        with torch.no_grad():
-            state = np.reshape(state, [1, self.input_dim]).astype(np.float32)
-            inp = torch.from_numpy(state)
-            out = self.model(inp).cpu().numpy()
-        return out
+    def load_model(self, model_file: Path):
+        return torch.load(model_file, weights_only=False, map_location="cpu")

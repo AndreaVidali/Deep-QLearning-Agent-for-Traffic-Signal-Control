@@ -7,7 +7,7 @@ yellow_duration: 4
 green_duration: 10
 
 # agent
-num_states: 80
+state_size: 80
 num_actions: 4
 gamma: 0.75
 

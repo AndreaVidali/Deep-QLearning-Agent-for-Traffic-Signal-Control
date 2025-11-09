@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-def save_data_and_plot(
+def save_data_and_plot(  # noqa: PLR0913
     data: list[float],
     filename: str,
     xlabel: str,
@@ -15,6 +15,9 @@ def save_data_and_plot(
     Produce a plot of performance of the agent over the session and save the relative data to txt.
     """
     out_folder.mkdir(parents=True, exist_ok=True)
+
+    plot_file = out_folder / f"plot_{filename}.png"
+    data_file = out_folder / f"plot_{filename}_data.txt"
 
     min_val = min(data)
     max_val = max(data)
@@ -30,9 +33,9 @@ def save_data_and_plot(
     fig = plt.gcf()
     fig.set_size_inches(20, 11.25)
     fig.tight_layout()
-    fig.savefig(out_folder / f"plot_{filename}.png", dpi=dpi)
+    fig.savefig(plot_file, dpi=dpi)
     plt.close("all")
 
-    with open(out_folder / f"plot_{filename}_data.txt", "w", encoding="utf-8") as file:
+    with data_file.open("w", encoding="utf-8") as file:
         for value in data:
             file.write(f"{value}\n")

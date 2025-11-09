@@ -11,6 +11,7 @@ dependencies = [
     "matplotlib>=3.10.7",
     "mypy>=1.18.2",
     "numpy>=2.3.4",
+    "pdbpp>=0.11.7",
     "pydantic>=2.12.4",
     "pyyaml>=6.0.3",
     "rich>=14.2.0",
@@ -30,6 +31,32 @@ tlcs = "tlcs.cli:app"
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+output-format = "concise"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "G004",   # logging-f-string
+    "D",      # pydocstyle
+    "ANN",    # flake8-annotations
+    "T201",   # print
+    "DTZ005", # call-datetime-now-without-tzinfo
+    "S311",   # suspicious-non-cryptographic-random-usage
+    "FBT001", # boolean-type-hint-positional-argument
+    # "DTZ002", # call-datetime-today
+    # "DTZ005", # call-datetime-now-without-tzinfo
+    # "DTZ007", # call-datetime-strptime-without-zone
+    # "TD002",  # missing-todo-author
+    # "TD003",  # missing-todo-link
+    # "FIX002", # line-contains-todo
+
+    # conflicting lint rules
+    "ISC001", # single-line-implicit-string-concatenation
+    "COM812", # missing-trailing-comma
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["finance"]
 
 [tool.uv]
 python-preference = "only-managed"
