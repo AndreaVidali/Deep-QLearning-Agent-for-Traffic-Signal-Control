@@ -5,6 +5,9 @@ import torch
 from torch import nn, optim
 
 from tlcs.constants import MODEL_FILE
+from tlcs.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class MLP(nn.Module):
@@ -40,11 +43,11 @@ class Model:
         self.output_dim = output_dim
 
         if model_path and (model_path / MODEL_FILE).exists():
-            print("Loading new model for the Agent")
+            logger.info("Loading new model for the Agent")
             model_file = model_path / MODEL_FILE
             self.model = self.load_model(model_file)
         else:
-            print("Creating new model for the Agent")
+            logger.info("Creating new model for the Agent")
             self.model = MLP(
                 input_dim=input_dim,
                 output_dim=output_dim,

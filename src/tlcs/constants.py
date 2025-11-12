@@ -10,6 +10,8 @@ TESTING_SETTINGS_FILE = Path("testing_settings.yaml")
 DEFAULT_MODEL_PATH = Path("model")
 MODEL_FILE = Path("trained_model.pt")
 
+DEFAULT_TEST_FOLDER = "test"
+
 ROUTES_FILE = Path("intersection/episode_routes.rou.xml")
 
 ROUTES_FILE_HEADER = """<routes>

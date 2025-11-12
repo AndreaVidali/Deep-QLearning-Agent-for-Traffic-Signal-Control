@@ -6,9 +6,12 @@ from tlcs.agent import Agent
 from tlcs.constants import TESTING_SETTINGS_FILE, TRAINING_SETTINGS_FILE
 from tlcs.env import Environment, EnvStats
 from tlcs.episode import Record, run_episode
+from tlcs.logger import get_logger
 from tlcs.memory import Memory
 from tlcs.plots import save_data_and_plot
 from tlcs.settings import load_testing_settings, load_training_settings
+
+logger = get_logger(__name__)
 
 
 def add_experience_to_memory(memory: Memory, history: list[Record]) -> None:
@@ -57,7 +60,7 @@ def training_session(settings_file: Path, out_path: Path):
     }
 
     while episode < tot_episodes:
-        print(f"\n----- Episode {episode + 1} of {tot_episodes}")
+        logger.info(f"Episode {episode + 1} of {tot_episodes}")
 
         new_epsilon = round(1.0 - (episode / tot_episodes), 2)
         agent.set_epsilon(new_epsilon)
@@ -86,19 +89,19 @@ def training_session(settings_file: Path, out_path: Path):
             training_stats=training_stats,
         )
 
-        print(f"Epsilon: {agent.epsilon}")
-        print(f"Reward: {training_stats['sum_neg_reward'][episode]}")
-        print(f"Cumulative wait: {training_stats['cumulative_wait'][episode]}")
-        print(f"Avg queue: {training_stats['avg_queue_length'][episode]}")
+        logger.info(f"\tEpsilon: {agent.epsilon}")
+        logger.info(f"\tReward: {training_stats['sum_neg_reward'][episode]}")
+        logger.info(f"\tCumulative wait: {training_stats['cumulative_wait'][episode]}")
+        logger.info(f"\tAvg queue: {training_stats['avg_queue_length'][episode]}")
 
         episode += 1
 
     out_path.mkdir(parents=True, exist_ok=True)
     agent.save_model(out_path)
 
-    print("\n----- Start time:", timestamp_start)
-    print("----- End time:", datetime.now())
-    print("----- Session info saved at:", out_path)
+    logger.info(f"Start time: {timestamp_start}")
+    logger.info(f"End time: {datetime.now()}")
+    logger.info(f"Session info saved at: {out_path}")
 
     copyfile(src=settings_file, dst=out_path / TRAINING_SETTINGS_FILE)
 
@@ -125,9 +128,12 @@ def training_session(settings_file: Path, out_path: Path):
     )
 
 
-def testing_session(settings_file: Path, model_path: Path) -> None:
+def testing_session(settings_file: Path, model_path: Path, test_name: str) -> None:
     """Load a trained agent from model_path and run a single testing episode."""
     settings = load_testing_settings(settings_file)
+
+    test_path = model_path / test_name
+    test_path.mkdir(parents=True, exist_ok=True)
 
     agent = Agent(
         settings=load_training_settings(model_path / TRAINING_SETTINGS_FILE),
@@ -155,8 +161,6 @@ def testing_session(settings_file: Path, model_path: Path) -> None:
         testing_stats["queue_length"].append(stats.queue_length)
 
     # TODO enable multiple tests, let user define name, check for existenve ena overwrite
-    test_path = model_path / "test"
-    test_path.mkdir(parents=True, exist_ok=True)
 
     copyfile(src=settings_file, dst=test_path / TESTING_SETTINGS_FILE)
 
@@ -175,4 +179,4 @@ def testing_session(settings_file: Path, model_path: Path) -> None:
         out_folder=test_path,
     )
 
-    print("----- Testing results saved at:", test_path)
+    logger.info(f"Testing results saved at: {test_path}")
