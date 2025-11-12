@@ -24,9 +24,9 @@ def run_episode(env: Environment, agent: Agent, seed: int) -> tuple[list[Record]
 
     while not env.is_over():
         current_state = env.get_state()
+
         action = agent.choose_action(current_state)
         action_stats = env.execute(action)
-
         env_stats += action_stats
 
         current_total_wait = env.get_cumulated_waiting_time()

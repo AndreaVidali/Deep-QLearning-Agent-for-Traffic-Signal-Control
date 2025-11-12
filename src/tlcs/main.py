@@ -76,7 +76,8 @@ def training_session(settings_file: Path, out_path: Path):
 
         add_experience_to_memory(memory=memory, history=episode_history)
 
-        agent.replay(memory=memory, gamma=settings.gamma)
+        for _ in range(settings.training_epochs):
+            agent.replay(memory=memory, gamma=settings.gamma)
 
         training_stats = update_training_stats(
             episode_history=episode_history,
