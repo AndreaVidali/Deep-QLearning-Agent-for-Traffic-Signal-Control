@@ -38,22 +38,18 @@ select = ["ALL"]
 ignore = [
     "G004",   # logging-f-string
     "D",      # pydocstyle
-    "ANN",    # flake8-annotations
     "T201",   # print
     "DTZ005", # call-datetime-now-without-tzinfo
     "S311",   # suspicious-non-cryptographic-random-usage
     "FBT001", # boolean-type-hint-positional-argument
-    # "DTZ002", # call-datetime-today
-    # "DTZ005", # call-datetime-now-without-tzinfo
-    # "DTZ007", # call-datetime-strptime-without-zone
-    # "TD002",  # missing-todo-author
-    # "TD003",  # missing-todo-link
-    # "FIX002", # line-contains-todo
 
     # conflicting lint rules
     "ISC001", # single-line-implicit-string-concatenation
     "COM812", # missing-trailing-comma
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.isort]
 known-first-party = ["finance"]

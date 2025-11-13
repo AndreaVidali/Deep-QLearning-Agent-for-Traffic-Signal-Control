@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Self
 
 import yaml
 from pydantic import BaseModel, Field, NonNegativeInt, PositiveFloat, PositiveInt, model_validator
@@ -34,7 +34,7 @@ class TrainingSettings(BaseModel):
     sumocfg_file: Path
 
     @model_validator(mode="after")
-    def check_memory_bounds(self):
+    def check_memory_bounds(self) -> Self:
         if self.memory_size_min >= self.memory_size_max:
             msg = (
                 f"memory_size_min ({self.memory_size_min}) must be smaller "

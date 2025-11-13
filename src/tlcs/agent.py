@@ -12,9 +12,9 @@ class Agent:
     def __init__(
         self,
         settings: TrainingSettings,
-        epsilon: float = 1,
+        epsilon: float = 1.0,
         model_path: Path | None = None,
-    ):
+    ) -> None:
         self.epsilon = epsilon
         self.model = Model(
             num_layers=settings.num_layers,
@@ -26,7 +26,7 @@ class Agent:
             model_path=model_path,
         )
 
-    def set_epsilon(self, epsilon):
+    def set_epsilon(self, epsilon: float) -> None:
         if epsilon < 0 or epsilon > 1:
             msg = "Epsilon out of bounds"
             raise ValueError(msg)
@@ -41,8 +41,8 @@ class Agent:
 
         return action_n
 
-    def replay(self, memory: Memory, gamma):
-        """Get samples from the memory and for each of them update the learning equation, then train"""
+    def replay(self, memory: Memory, gamma: float) -> None:
+        """Get samples from memory and apply the learning update to each entry before training."""
         batch = memory.get_samples(self.model.batch_size)
 
         if len(batch) > 0:  # if the memory is full enough
@@ -74,5 +74,5 @@ class Agent:
 
             self.model.train_batch(x, y)  # train the NN
 
-    def save_model(self, out_path: Path):
+    def save_model(self, out_path: Path) -> None:
         self.model.save_model(out_path)

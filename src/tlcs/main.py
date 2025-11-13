@@ -54,7 +54,7 @@ def update_training_stats(
     return training_stats
 
 
-def training_session(settings_file: Path, out_path: Path):
+def training_session(settings_file: Path, out_path: Path) -> None:
     settings = load_training_settings(settings_file)
 
     memory = Memory(size_max=settings.memory_size_max, size_min=settings.memory_size_min)

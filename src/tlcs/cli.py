@@ -65,7 +65,7 @@ def cmd_train(
         Path,
         typer.Option(help="Directory where training outputs and trained model will be saved."),
     ] = DEFAULT_MODEL_PATH,
-):
+) -> None:
     check_training_path(out_path)
 
     training_session(
@@ -96,7 +96,7 @@ def cmd_test(
             help="The name of the test folder.",
         ),
     ] = DEFAULT_TEST_FOLDER,
-):
+) -> None:
     check_testing_path(model_path=model_path, test_name=test_name)
     testing_session(settings_file=settings_file, model_path=model_path, test_name=test_name)
 

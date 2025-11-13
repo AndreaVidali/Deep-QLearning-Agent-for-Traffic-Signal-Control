@@ -1,6 +1,5 @@
 import random
 from collections import deque
-from typing import Any
 
 
 class Memory:
@@ -11,11 +10,11 @@ class Memory:
         self.size_max = size_max
         self.size_min = size_min
 
-    def add_sample(self, sample: Any) -> None:
+    def add_sample(self, sample: tuple) -> None:
         """Add a sample to memory."""
         self.samples.append(sample)
 
-    def get_samples(self, n: int):
+    def get_samples(self, n: int) -> list[tuple]:
         """
         Get n samples randomly from memory.
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import traci
+from numpy.typing import NDArray
 from sumolib import checkBinary
 
 from tlcs.constants import (
@@ -22,14 +23,14 @@ class EnvStats:
 class Environment:
     def __init__(
         self,
-        state_size,
-        n_cars_generated,
-        max_steps,
-        yellow_duration,
-        green_duration,
+        state_size: int,
+        n_cars_generated: int,
+        max_steps: int,
+        yellow_duration: int,
+        green_duration: int,
         sumocfg_file: Path,
         gui: bool,
-    ):
+    ) -> None:
         self.state_size = state_size
         self.n_cars_generated = n_cars_generated
         self.max_steps = max_steps
@@ -62,24 +63,24 @@ class Environment:
             str(self.max_steps),
         ]
 
-    def activate(self):
+    def activate(self) -> None:
         sumo_cmd = self.build_sumo_cmd()
         traci.start(sumo_cmd)
 
-    def deactivate(self):
+    def deactivate(self) -> None:
         traci.close()
 
-    def is_over(self):
+    def is_over(self) -> bool:
         return self.step >= self.max_steps
 
-    def generate_routefile(self, seed):
+    def generate_routefile(self, seed: int) -> None:
         generate_routefile(
             seed=seed,
             n_cars_generated=self.n_cars_generated,
             max_steps=self.max_steps,
         )
 
-    def _get_lane_cell(self, lane_pos: float):
+    def _get_lane_cell(self, lane_pos: float) -> int:
         # invert so 0 is at the light; clamp to [0, 750]
         lane_pos = ROAD_MAX_LENGTH - lane_pos
 
@@ -90,7 +91,7 @@ class Environment:
         msg = "Error while getting lane cell"
         raise RuntimeError(msg)
 
-    def get_state(self):
+    def get_state(self) -> NDArray:
         state = np.zeros(self.state_size, dtype=float)
         lanes_groups = {
             "W": {"center/right": ("W2TL_0", "W2TL_1", "W2TL_2"), "left": ("W2TL_3")},
