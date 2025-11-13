@@ -1,8 +1,5 @@
 from pathlib import Path
 
-# TODO WARNING: you need to also edit environemnt.net.xml
-# TODO based on environemnt.net.xml
-
 SETTINGS_PATH = Path("settings")
 TRAINING_SETTINGS_FILE = Path("training_settings.yaml")
 TESTING_SETTINGS_FILE = Path("testing_settings.yaml")

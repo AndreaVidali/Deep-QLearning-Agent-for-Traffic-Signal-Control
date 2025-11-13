@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from shutil import copyfile
+from typing import TypedDict
 
 from tlcs.agent import Agent
 from tlcs.constants import TESTING_SETTINGS_FILE, TRAINING_SETTINGS_FILE
@@ -12,6 +13,17 @@ from tlcs.plots import save_data_and_plot
 from tlcs.settings import load_testing_settings, load_training_settings
 
 logger = get_logger(__name__)
+
+
+class TrainingStats(TypedDict):
+    sum_neg_reward: list[float]
+    cumulative_wait: list[int]
+    avg_queue_length: list[float]
+
+
+class TestingStats(TypedDict):
+    reward: list[float]
+    queue_length: list[int]
 
 
 def add_experience_to_memory(memory: Memory, history: list[Record]) -> None:
@@ -27,8 +39,8 @@ def update_training_stats(
     episode_history: list[Record],
     env_stats: list[EnvStats],
     max_steps: int,
-    training_stats: dict,
-):
+    training_stats: TrainingStats,
+) -> TrainingStats:
     # accumulate only negative rewards for clearer trend
     sum_neg_reward = sum([record.reward for record in episode_history if record.reward < 0])
     training_stats["sum_neg_reward"].append(sum_neg_reward)
@@ -53,7 +65,7 @@ def training_session(settings_file: Path, out_path: Path):
     timestamp_start = datetime.now()
     tot_episodes = settings.total_episodes
 
-    training_stats = {  # TODO use better struct
+    training_stats: TrainingStats = {
         "sum_neg_reward": [],
         "cumulative_wait": [],
         "avg_queue_length": [],
@@ -152,15 +164,13 @@ def testing_session(settings_file: Path, model_path: Path, test_name: str) -> No
     )
 
     episode_history, env_stats = run_episode(env=env, agent=agent, seed=settings.episode_seed)
-    testing_stats = {"reward": [], "queue_length": []}  # TODO use better struct
+    testing_stats: TestingStats = {"reward": [], "queue_length": []}
 
     for record in episode_history:
         testing_stats["reward"].append(record.reward)
 
     for stats in env_stats:
         testing_stats["queue_length"].append(stats.queue_length)
-
-    # TODO enable multiple tests, let user define name, check for existenve ena overwrite
 
     copyfile(src=settings_file, dst=test_path / TESTING_SETTINGS_FILE)
 

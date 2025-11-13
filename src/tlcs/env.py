@@ -175,9 +175,9 @@ class Environment:
 
         return stats
 
-    def execute(self, action: int) -> list[EnvStats]:  # TODO action need good type
-        current_green_phase = traci.trafficlight.getPhase("TL")
+    def execute(self, action: int) -> list[EnvStats]:
         next_green_phase = ACTION_TO_TL_PHASE[action]
+        current_green_phase = traci.trafficlight.getPhase("TL")
 
         stats = []
 

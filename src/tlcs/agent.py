@@ -35,11 +35,9 @@ class Agent:
     def choose_action(self, state: np.ndarray) -> int:
         """Choose exploration vs exploitation according to epsilon-greedy policy."""
         if random.random() < self.epsilon:
-            # explore
-            action_n = random.randint(0, self.model.output_dim - 1)
+            action_n = random.randint(0, self.model.output_dim - 1)  # explore
         else:
-            # exploit
-            action_n = int(np.argmax(self.model.predict_one(state)))
+            action_n = int(np.argmax(self.model.predict_one(state)))  # exploit
 
         return action_n
 

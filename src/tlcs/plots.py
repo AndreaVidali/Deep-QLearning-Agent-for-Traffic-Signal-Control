@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 def save_data_and_plot(  # noqa: PLR0913
-    data: list[float],
+    data: list[float] | list[int],
     filename: str,
     xlabel: str,
     ylabel: str,
