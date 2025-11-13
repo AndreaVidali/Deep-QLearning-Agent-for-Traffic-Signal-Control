@@ -1,3 +1,8 @@
+Issues with sumo-gui on MacOS Tahoe:
+- [link1](https://github.com/eclipse-sumo/sumo/issues/17272)
+- [link2](https://github.com/XQuartz/XQuartz/issues/446)
+- [link3](https://github.com/XQuartz/XQuartz/issues/438#issuecomment-3350746279)
+
 # Deep Q-Learning Agent for Traffic Signal Control
 
 A framework where a deep Q-Learning Reinforcement Learning agent tries to choose the correct traffic light phase at an intersection to maximize traffic efficiency.
