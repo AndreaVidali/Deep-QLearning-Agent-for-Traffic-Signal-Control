@@ -36,6 +36,7 @@ class Environment:
         max_steps: int,
         yellow_duration: int,
         green_duration: int,
+        turn_chance: float,
         sumocfg_file: Path,
         gui: bool,
     ) -> None:
@@ -47,6 +48,7 @@ class Environment:
             max_steps: Maximum number of simulation steps in an episode.
             yellow_duration: Number of steps to hold a yellow phase.
             green_duration: Number of steps to hold a green phase.
+            turn_chance: Probability for each car to turn instead of going straight.
             sumocfg_file: Path to the SUMO configuration file.
             gui: Whether to use the SUMO GUI binary.
         """
@@ -55,6 +57,7 @@ class Environment:
         self.max_steps = max_steps
         self.yellow_duration = yellow_duration
         self.green_duration = green_duration
+        self.turn_chance = turn_chance
         self.sumocfg_file = sumocfg_file
         self.gui = gui
 
@@ -109,6 +112,7 @@ class Environment:
             seed=seed,
             n_cars_generated=self.n_cars_generated,
             max_steps=self.max_steps,
+            turn_chance=self.turn_chance,
         )
 
     def _get_lane_cell(self, lane_pos: float) -> int:

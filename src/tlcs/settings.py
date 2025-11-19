@@ -15,6 +15,7 @@ class TrainingSettings(BaseModel):
     n_cars_generated: PositiveInt
     green_duration: PositiveInt
     yellow_duration: PositiveInt
+    turn_chanche: Annotated[float, Field(ge=0, le=1)]
 
     # model
     num_layers: PositiveInt
@@ -57,6 +58,7 @@ class TestingSettings(BaseModel):
     episode_seed: int
     yellow_duration: PositiveInt
     green_duration: PositiveInt
+    turn_chanche: Annotated[float, Field(ge=0, le=1)]
 
     # agent
     state_size: PositiveInt
@@ -65,7 +67,6 @@ class TestingSettings(BaseModel):
 
     # paths
     sumocfg_file: Path
-    model_to_test: PositiveInt
 
 
 def load_yaml(path: Path) -> dict[str, Any]:

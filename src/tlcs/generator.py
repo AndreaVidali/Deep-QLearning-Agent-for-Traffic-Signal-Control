@@ -4,7 +4,6 @@ from numpy.typing import NDArray
 from tlcs.constants import (
     ROUTES_FILE,
     ROUTES_FILE_HEADER,
-    STRAIGHT_CHANCE,
     STRAIGHT_ROUTES,
     TURN_ROUTES,
 )
@@ -42,16 +41,22 @@ def _get_car_row(route_id: str, car_i: int, step: int) -> str:
     return f'    <vehicle id="{route_id}_{car_i}" type="standard_car" route="{route_id}" depart="{step}" departLane="random" departSpeed="10" />'  # noqa: E501
 
 
-def generate_routefile(seed: int, n_cars_generated: int, max_steps: int) -> None:
+def generate_routefile(
+    seed: int,
+    n_cars_generated: int,
+    max_steps: int,
+    turn_chance: float,
+) -> None:
     """Generate a SUMO route file for one simulation episode.
 
     Car departure times follow a Weibull distribution re-scaled to [0, max_steps].
-    A fraction of cars go straight and the rest turn, controlled by STRAIGHT_CHANCE.
+    A fraction of cars go straight and the rest turn, controlled by turn_chance.
 
     Args:
         seed: Random seed for reproducible generation.
         n_cars_generated: Number of cars to generate in the episode.
         max_steps: Maximum simulation step for car departures.
+        turn_chance: Probability to select a turn route rather than a straight route.
     """
     rng = np.random.default_rng(seed)
 
@@ -70,7 +75,7 @@ def generate_routefile(seed: int, n_cars_generated: int, max_steps: int) -> None
         print(ROUTES_FILE_HEADER, file=routes_file)
 
         for car_i, step in enumerate(depart_steps):
-            routes_selected = STRAIGHT_ROUTES if rng.random() < STRAIGHT_CHANCE else TURN_ROUTES
+            routes_selected = TURN_ROUTES if rng.random() < turn_chance else STRAIGHT_ROUTES
             route_id = rng.choice(routes_selected)
             car_row = _get_car_row(route_id=route_id, car_i=car_i, step=step)
 

@@ -33,7 +33,6 @@ ROUTES_FILE_HEADER = """<routes>
 STRAIGHT_ROUTES = ("W_E", "E_W", "N_S", "S_N")
 TURN_ROUTES = ("W_N", "W_S", "N_W", "N_E", "E_N", "E_S", "S_W", "S_E")
 
-STRAIGHT_CHANCE = 0.75  # 75% go straight, 25% turn
 
 # based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
