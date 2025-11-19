@@ -16,6 +16,7 @@ app = typer.Typer(
     help="Train and run TLCS.",
     add_completion=False,
     no_args_is_help=True,
+    pretty_exceptions_show_locals=False,
 )
 
 

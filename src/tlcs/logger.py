@@ -18,6 +18,7 @@ def configure_logging(level: int = logging.INFO) -> None:
             RichHandler(
                 rich_tracebacks=True,
                 tracebacks_suppress=[typer],
+                tracebacks_show_locals=False,
             )
         ],
     )
