@@ -37,11 +37,12 @@ output-format = "concise"
 select = ["ALL"]
 ignore = [
     "G004",   # logging-f-string
-    "D",      # pydocstyle
     "T201",   # print
     "DTZ005", # call-datetime-now-without-tzinfo
     "S311",   # suspicious-non-cryptographic-random-usage
     "FBT001", # boolean-type-hint-positional-argument
+    "D104",   # undocumented-public-package
+    "D100",   # undocumented-public-module
 
     # conflicting lint rules
     "ISC001", # single-line-implicit-string-concatenation

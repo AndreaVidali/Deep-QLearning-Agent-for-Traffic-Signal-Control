@@ -9,17 +9,25 @@ from tlcs.settings import TrainingSettings
 
 
 class Agent:
+    """Reinforcement-learning agent using an epsilon-greedy policy."""
+
     def __init__(
         self,
         settings: TrainingSettings,
         epsilon: float = 1.0,
         model_path: Path | None = None,
     ) -> None:
+        """Initialize the agent and its underlying model.
+
+        Args:
+            settings: Training settings containing model hyperparameters.
+            epsilon: Exploration probability in [0, 1].
+            model_path: Optional path to load a pre-trained model.
+        """
         self.epsilon = epsilon
         self.model = Model(
             num_layers=settings.num_layers,
             width=settings.width_layers,
-            batch_size=settings.batch_size,
             learning_rate=settings.learning_rate,
             input_dim=settings.state_size,
             output_dim=settings.num_actions,
@@ -27,52 +35,70 @@ class Agent:
         )
 
     def set_epsilon(self, epsilon: float) -> None:
-        if epsilon < 0 or epsilon > 1:
-            msg = "Epsilon out of bounds"
+        """Set the epsilon value for epsilon-greedy exploration.
+
+        Args:
+            epsilon: Exploration probability in [0, 1].
+        """
+        if not 0 <= epsilon <= 1:
+            msg = "Epsilon must be between 0 and 1."
             raise ValueError(msg)
         self.epsilon = epsilon
 
     def choose_action(self, state: np.ndarray) -> int:
-        """Choose exploration vs exploitation according to epsilon-greedy policy."""
+        """Choose an action according to an epsilon-greedy policy.
+
+        Args:
+            state: Current state representation.
+
+        Returns:
+            Index of the selected action.
+        """
         if random.random() < self.epsilon:
-            action_n = random.randint(0, self.model.output_dim - 1)  # explore
-        else:
-            action_n = int(np.argmax(self.model.predict_one(state)))  # exploit
+            # Explore: random action
+            return random.randrange(self.model.output_dim)
 
-        return action_n
+        # Exploit: greedy action
+        q_values = self.model.predict_one(state)
+        return int(np.argmax(q_values))
 
-    def replay(self, memory: Memory, gamma: float) -> None:
-        """Get samples from memory and apply the learning update to each entry before training."""
-        batch = memory.get_samples(self.model.batch_size)
+    def replay(self, memory: Memory, gamma: float, batch_size: int) -> None:
+        """Sample from replay memory and perform a Q-learning update.
 
-        if len(batch) > 0:  # if the memory is full enough
-            # extract states from the batch
-            states = np.array([val[0] for val in batch])
+        Args:
+            memory: Experience replay buffer.
+            gamma: Discount factor for future rewards.
+            batch_size: Number of samples to draw from the memory.
+        """
+        batch = memory.get_samples(batch_size)
 
-            # extract next states from the batch
-            next_states = np.array([val[3] for val in batch])
+        if not batch:
+            return
 
-            # predict Q(state), for every sample
-            q_s_a = self.model.predict_batch(states)
+        # Extract states and next states
+        states = np.array([sample.state for sample in batch])
+        next_states = np.array([sample.next_state for sample in batch])
 
-            # predict Q(next_state), for every sample
-            q_s_a_d = self.model.predict_batch(next_states)
+        # Predict Q-values for current and next states
+        q_values = self.model.predict_batch(states)
+        next_q_values = self.model.predict_batch(next_states)
 
-            # setup training arrays
-            x = np.zeros((len(batch), self.model.input_dim))
-            y = np.zeros((len(batch), self.model.output_dim))
+        # Prepare training data
+        x = states
+        y = q_values.copy()
 
-            for i, b in enumerate(batch):
-                # extract data from one sample
-                state, action, reward, _ = (b[0], b[1], b[2], b[3])
-                # get the Q(state) predicted before
-                current_q = q_s_a[i]
-                # update Q(state, action)
-                current_q[action] = reward + gamma * np.amax(q_s_a_d[i])
-                x[i] = state
-                y[i] = current_q  # Q(state) that includes the updated action value
+        for i, sample in enumerate(batch):
+            # Q-learning target: r + gamma * max_a' Q(s', a')
+            target = sample.reward + gamma * np.max(next_q_values[i])
+            y[i, sample.action] = target
 
-            self.model.train_batch(x, y)  # train the NN
+        # Train model on the updated Q-values
+        self.model.train_batch(x, y)
 
     def save_model(self, out_path: Path) -> None:
+        """Save the underlying model to disk.
+
+        Args:
+            out_path: Destination path for the saved model.
+        """
         self.model.save_model(out_path)

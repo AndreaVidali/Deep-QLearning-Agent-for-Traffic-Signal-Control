@@ -8,20 +8,28 @@ from sumolib import checkBinary
 
 from tlcs.constants import (
     ACTION_TO_TL_PHASE,
+    CELLS_PER_LANE_GROUP,
+    INCOMING_EDGES,
     LANE_DISTANCE_TO_CELL,
+    LANE_ID_TO_GROUP,
     ROAD_MAX_LENGTH,
     TL_GREEN_TO_YELLOW,
+    TRAFFIC_LIGHT_ID,
 )
 from tlcs.generator import generate_routefile
 
 
 @dataclass
 class EnvStats:
+    """Snapshot of environment statistics for a single simulation step."""
+
     queue_length: int
 
 
 class Environment:
-    def __init__(
+    """Reinforcement-learning environment wrapper around a SUMO traffic simulation."""
+
+    def __init__(  # noqa: PLR0913
         self,
         state_size: int,
         n_cars_generated: int,
@@ -31,6 +39,17 @@ class Environment:
         sumocfg_file: Path,
         gui: bool,
     ) -> None:
+        """Initialize the environment.
+
+        Args:
+            state_size: Number of cells in the flattened state vector.
+            n_cars_generated: Number of cars to generate for the episode.
+            max_steps: Maximum number of simulation steps in an episode.
+            yellow_duration: Number of steps to hold a yellow phase.
+            green_duration: Number of steps to hold a green phase.
+            sumocfg_file: Path to the SUMO configuration file.
+            gui: Whether to use the SUMO GUI binary.
+        """
         self.state_size = state_size
         self.n_cars_generated = n_cars_generated
         self.max_steps = max_steps
@@ -42,17 +61,17 @@ class Environment:
         self.step = 0
 
     def build_sumo_cmd(self) -> list[str]:
-        """
-        Configure the SUMO command-line based on GUI flag and config file name.
+        """Build the SUMO command line based on configuration settings.
+
+        Returns:
+            List of command-line arguments to start SUMO.
         """
         sumo_binary = checkBinary("sumo-gui" if self.gui else "sumo")
 
-        # Build the full path to the SUMO configuration
         if not self.sumocfg_file.exists():
             msg = f"SUMO config not found at '{self.sumocfg_file}'"
             raise FileNotFoundError(msg)
 
-        # Command to run SUMO
         return [
             sumo_binary,
             "-c",
@@ -64,16 +83,28 @@ class Environment:
         ]
 
     def activate(self) -> None:
+        """Start the SUMO simulation."""
         sumo_cmd = self.build_sumo_cmd()
         traci.start(sumo_cmd)
 
     def deactivate(self) -> None:
+        """Stop the SUMO simulation."""
         traci.close()
 
     def is_over(self) -> bool:
+        """Check whether the maximum number of steps has been reached.
+
+        Returns:
+            True if the episode is finished, False otherwise.
+        """
         return self.step >= self.max_steps
 
     def generate_routefile(self, seed: int) -> None:
+        """Generate a route file for the current episode.
+
+        Args:
+            seed: Random seed used for route generation.
+        """
         generate_routefile(
             seed=seed,
             n_cars_generated=self.n_cars_generated,
@@ -81,54 +112,49 @@ class Environment:
         )
 
     def _get_lane_cell(self, lane_pos: float) -> int:
-        # invert so 0 is at the light; clamp to [0, 750]
+        """Map a continuous lane position to a discrete cell index.
+
+        The lane is inverted so that 0 is at the traffic light and clamped to [0, ROAD_MAX_LENGTH].
+
+        Args:
+            lane_pos: Distance from the start of the edge in meters.
+
+        Returns:
+            Index of the discretized cell (0-based).
+        """
+        # invert so 0 is at the light; clamp to [0, ROAD_MAX_LENGTH]
         lane_pos = ROAD_MAX_LENGTH - lane_pos
+        lane_pos = max(0.0, min(ROAD_MAX_LENGTH, lane_pos))
 
         for distance, cell in LANE_DISTANCE_TO_CELL.items():
-            if lane_pos < distance:
+            if lane_pos <= distance:
                 return cell
 
-        msg = "Error while getting lane cell"
+        msg = "Error while getting lane cell."
         raise RuntimeError(msg)
 
     def get_state(self) -> NDArray:
+        """Compute the discrete state representation of all vehicles.
+
+        The state is a binary vector of length `state_size`. Each incoming lane is discretized into
+        cells, grouped by direction and turning type.
+
+        Returns:
+            A NumPy array of shape (state_size,) with 0/1 occupancy values.
+        """
         state = np.zeros(self.state_size, dtype=float)
-        lanes_groups = {
-            "W": {"center/right": ("W2TL_0", "W2TL_1", "W2TL_2"), "left": ("W2TL_3")},
-            "N": {"center/right": ("N2TL_0", "N2TL_1", "N2TL_2"), "left": ("N2TL_3")},
-            "E": {"center/right": ("E2TL_0", "E2TL_1", "E2TL_2"), "left": ("E2TL_3")},
-            "S": {"center/right": ("S2TL_0", "S2TL_1", "S2TL_2"), "left": ("S2TL_3")},
-        }
 
-        car_list = traci.vehicle.getIDList()
-        for car_id in car_list:
-            lane_pos = float(traci.vehicle.getLanePosition(car_id))
+        for car_id in traci.vehicle.getIDList():
             lane_id = traci.vehicle.getLaneID(car_id)
+            lane_group = LANE_ID_TO_GROUP.get(lane_id)
+            if lane_group is None:
+                # Ignore cars that are not on incoming lanes.
+                continue
 
-            # map lane_id to group 0..7
-            if lane_id in lanes_groups["W"]["center/right"]:
-                lane_group = 0
-            elif lane_id == lanes_groups["W"]["left"]:
-                lane_group = 1
-            elif lane_id in lanes_groups["N"]["center/right"]:
-                lane_group = 2
-            elif lane_id == lanes_groups["N"]["left"]:
-                lane_group = 3
-            elif lane_id in lanes_groups["E"]["center/right"]:
-                lane_group = 4
-            elif lane_id == lanes_groups["E"]["left"]:
-                lane_group = 5
-            elif lane_id in lanes_groups["S"]["center/right"]:
-                lane_group = 6
-            elif lane_id == lanes_groups["S"]["left"]:
-                lane_group = 7
-            else:
-                continue  # ignore cars not in incoming lanes
-
-            # distance buckets to 10 cells
+            lane_pos: float = traci.vehicle.getLanePosition(car_id)
             lane_cell = self._get_lane_cell(lane_pos)
 
-            car_position = lane_group * 10 + lane_cell  # 0..79
+            car_position = lane_group * CELLS_PER_LANE_GROUP + lane_cell
 
             if car_position < 0 or car_position >= self.state_size:
                 msg = "Out of bounds car position."
@@ -139,33 +165,51 @@ class Environment:
         return state
 
     def get_cumulated_waiting_time(self) -> float:
-        """Retrieve the waiting time of every car in the incoming roads."""
-        incoming_roads = {"E2TL", "N2TL", "W2TL", "S2TL"}
-        car_list = traci.vehicle.getIDList()
+        """Compute the sum of waiting times for vehicles on incoming edges.
+
+        Returns:
+            Total accumulated waiting time of all vehicles on incoming edges.
+        """
         waiting_times = 0.0
 
-        for car_id in car_list:
-            wait_time = float(traci.vehicle.getAccumulatedWaitingTime(car_id))
-            # get the road id where the car is located
+        for car_id in traci.vehicle.getIDList():
             road_id = traci.vehicle.getRoadID(car_id)
-
-            # consider only the waiting times of cars in incoming roads
-            if road_id in incoming_roads:
-                waiting_times += wait_time
+            if road_id not in INCOMING_EDGES:
+                continue
+            wait_time = float(traci.vehicle.getAccumulatedWaitingTime(car_id))
+            waiting_times += wait_time
 
         return waiting_times
 
     def _set_yellow_phase(self, green_phase_code: int) -> None:
-        """Activate the correct yellow light combination in SUMO."""
+        """Switch the traffic light to the yellow phase corresponding to a green phase.
+
+        Args:
+            green_phase_code: Code of the current green phase.
+        """
         yellow_phase_code = TL_GREEN_TO_YELLOW[green_phase_code]
-        traci.trafficlight.setPhase("TL", yellow_phase_code)
+        traci.trafficlight.setPhase(TRAFFIC_LIGHT_ID, yellow_phase_code)
 
     def _set_green_phase(self, green_phase_code: int) -> None:
-        """Activate the correct green light combination in SUMO."""
-        traci.trafficlight.setPhase("TL", green_phase_code)
+        """Switch the traffic light to the given green phase.
+
+        Args:
+            green_phase_code: Code of the green phase to activate.
+        """
+        traci.trafficlight.setPhase(TRAFFIC_LIGHT_ID, green_phase_code)
 
     def _simulate(self, duration: int) -> list[EnvStats]:
-        stats = []
+        """Advance the simulation for a given number of steps.
+
+        The actual number of steps is capped so as not to exceed `max_steps`.
+
+        Args:
+            duration: Desired number of simulation steps.
+
+        Returns:
+            A list of EnvStats, one entry per simulation step.
+        """
+        stats: list[EnvStats] = []
         steps_todo = min(duration, self.max_steps - self.step)
 
         for _ in range(steps_todo):
@@ -177,27 +221,42 @@ class Environment:
         return stats
 
     def execute(self, action: int) -> list[EnvStats]:
-        next_green_phase = ACTION_TO_TL_PHASE[action]
-        current_green_phase = traci.trafficlight.getPhase("TL")
+        """Execute an action by changing the traffic light phase.
 
-        stats = []
+        If the requested phase differs from the current one, a yellow phase is inserted before
+        switching to the new green phase.
+
+        Args:
+            action: Discrete action index mapped to a traffic light phase.
+
+        Returns:
+            A list of EnvStats collected during the applied phases.
+        """
+        next_green_phase = ACTION_TO_TL_PHASE[action]
+        current_green_phase = traci.trafficlight.getPhase(TRAFFIC_LIGHT_ID)
+
+        stats: list[EnvStats] = []
 
         if next_green_phase != current_green_phase:
             self._set_yellow_phase(current_green_phase)
             stats_yellow = self._simulate(self.yellow_duration)
-            stats += stats_yellow
+            stats.extend(stats_yellow)
 
         if self.is_over():
             return stats
 
         self._set_green_phase(next_green_phase)
         stats_green = self._simulate(self.green_duration)
-        stats += stats_green
+        stats.extend(stats_green)
 
         return stats
 
     def get_queue_length(self) -> int:
-        """Retrieve the number of cars with speed = 0 in every incoming lane."""
+        """Return the number of stopped vehicles on all incoming edges.
+
+        Returns:
+            Total number of vehicles with speed 0 on incoming edges.
+        """
         halt_n = traci.edge.getLastStepHaltingNumber("N2TL")
         halt_s = traci.edge.getLastStepHaltingNumber("S2TL")
         halt_e = traci.edge.getLastStepHaltingNumber("E2TL")
