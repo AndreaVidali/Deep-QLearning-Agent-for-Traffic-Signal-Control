@@ -111,7 +111,6 @@ def training_session(settings_file: Path, out_path: Path) -> None:
         agent.set_epsilon(new_epsilon)
 
         env = Environment(
-            state_size=settings.state_size,
             n_cars_generated=settings.n_cars_generated,
             max_steps=settings.max_steps,
             yellow_duration=settings.yellow_duration,
@@ -200,7 +199,6 @@ def testing_session(settings_file: Path, model_path: Path, test_name: str) -> No
     )
 
     env = Environment(
-        state_size=settings.state_size,
         n_cars_generated=settings.n_cars_generated,
         max_steps=settings.max_steps,
         yellow_duration=settings.yellow_duration,

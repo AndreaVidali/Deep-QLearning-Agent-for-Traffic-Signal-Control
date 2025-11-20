@@ -1,5 +1,9 @@
 from pathlib import Path
 
+# ---------------------------------------------------------------------------
+# Paths and filenames
+# ---------------------------------------------------------------------------
+
 DEFAULT_SETTINGS_PATH = Path("settings")
 DEFAULT_MODEL_PATH = Path("model")
 
@@ -10,10 +14,14 @@ MODEL_FILE = Path("trained_model.pt")
 
 DEFAULT_TEST_FOLDER = "test"
 
-# route file generation
+# ---------------------------------------------------------------------------
+# SUMO route file configuration
+# ---------------------------------------------------------------------------
 
+# Route file used in the SUMO config.
 ROUTES_FILE = Path("intersection/episode_routes.rou.xml")
 
+# Header for the generated routes file: vehicle type and all OD routes.
 ROUTES_FILE_HEADER = """<routes>
     <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />
 
@@ -30,20 +38,25 @@ ROUTES_FILE_HEADER = """<routes>
     <route id="S_N" edges="S2TL TL2N"/>
     <route id="S_E" edges="S2TL TL2E"/>"""  # noqa: E501
 
+# Straight vs turning routes
 STRAIGHT_ROUTES = ("W_E", "E_W", "N_S", "S_N")
 TURN_ROUTES = ("W_N", "W_S", "N_W", "N_E", "E_N", "E_S", "S_W", "S_E")
 
+# ---------------------------------------------------------------------------
+# Traffic light phases and action mapping
+# ---------------------------------------------------------------------------
 
-# based on environment.net.xml
-PHASE_NS_GREEN = 0  # action 0 code 00
+# Phase indices follow the <tlLogic> order in environment.net.xml.
+PHASE_NS_GREEN = 0
 PHASE_NS_YELLOW = 1
-PHASE_NSL_GREEN = 2  # action 1 code 01
+PHASE_NSL_GREEN = 2
 PHASE_NSL_YELLOW = 3
-PHASE_EW_GREEN = 4  # action 2 code 10
+PHASE_EW_GREEN = 4
 PHASE_EW_YELLOW = 5
-PHASE_EWL_GREEN = 6  # action 3 code 11
+PHASE_EWL_GREEN = 6
 PHASE_EWL_YELLOW = 7
 
+# Action -> green phase.
 ACTION_TO_TL_PHASE = {
     0: PHASE_NS_GREEN,
     1: PHASE_NSL_GREEN,
@@ -51,6 +64,7 @@ ACTION_TO_TL_PHASE = {
     3: PHASE_EWL_GREEN,
 }
 
+# Green phase -> corresponding yellow phase.
 TL_GREEN_TO_YELLOW = {
     PHASE_NS_GREEN: PHASE_NS_YELLOW,
     PHASE_NSL_GREEN: PHASE_NSL_YELLOW,
@@ -58,10 +72,21 @@ TL_GREEN_TO_YELLOW = {
     PHASE_EWL_GREEN: PHASE_EWL_YELLOW,
 }
 
-# phase codes based on environment.net.xml
+# ---------------------------------------------------------------------------
+# RL state / action space
+# ---------------------------------------------------------------------------
+
+STATE_SIZE = 80  # 8 lane groups * 10 cells
+NUM_ACTIONS = 4  # matches keys in ACTION_TO_TL_PHASE
+
+# ---------------------------------------------------------------------------
+# Lane geometry and discretization
+# ---------------------------------------------------------------------------
+
+# Edge length in environment.net.xml.
 ROAD_MAX_LENGTH = 750
 
-# Mapping from distance along a lane (in meters) to a discrete cell index.
+# Thresholds (m) -> cell index for discretizing distance to the junction.
 LANE_DISTANCE_TO_CELL = {
     7: 0,
     14: 1,
@@ -75,13 +100,20 @@ LANE_DISTANCE_TO_CELL = {
     750: 9,
 }
 
-
+# Number of cells per logical lane group.
 CELLS_PER_LANE_GROUP = 10
 
+# Incoming edges towards the TL junction.
 INCOMING_EDGES = ("E2TL", "N2TL", "W2TL", "S2TL")
 
+# Traffic light ID in the net.
 TRAFFIC_LIGHT_ID = "TL"
 
+# ---------------------------------------------------------------------------
+# Lane grouping
+# ---------------------------------------------------------------------------
+
+# Map each incoming lane to a lane-group index used in the state representation.
 LANE_ID_TO_GROUP: dict[str, int] = {
     # West
     "W2TL_0": 0,

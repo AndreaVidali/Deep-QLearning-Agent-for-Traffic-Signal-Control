@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+from tlcs.constants import NUM_ACTIONS, STATE_SIZE
 from tlcs.memory import Memory
 from tlcs.model import Model
 from tlcs.settings import TrainingSettings
@@ -29,8 +30,8 @@ class Agent:
             num_layers=settings.num_layers,
             width=settings.width_layers,
             learning_rate=settings.learning_rate,
-            input_dim=settings.state_size,
-            output_dim=settings.num_actions,
+            input_dim=STATE_SIZE,
+            output_dim=NUM_ACTIONS,
             model_path=model_path,
         )
 

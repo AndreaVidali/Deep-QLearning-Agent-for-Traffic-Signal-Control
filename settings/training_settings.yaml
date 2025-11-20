@@ -19,8 +19,6 @@ memory_size_min: 600
 memory_size_max: 50000
 
 # agent
-state_size: 80
-num_actions: 4
 gamma: 0.75
 
 # paths

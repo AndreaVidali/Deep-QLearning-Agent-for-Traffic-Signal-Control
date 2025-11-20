@@ -29,8 +29,6 @@ class TrainingSettings(BaseModel):
     memory_size_max: PositiveInt
 
     # agent
-    state_size: PositiveInt
-    num_actions: PositiveInt
     gamma: Annotated[float, Field(ge=0, le=1)]
 
     # paths
@@ -61,8 +59,6 @@ class TestingSettings(BaseModel):
     turn_chanche: Annotated[float, Field(ge=0, le=1)]
 
     # agent
-    state_size: PositiveInt
-    num_actions: PositiveInt
     gamma: Annotated[float, Field(ge=0, le=1)]
 
     # paths

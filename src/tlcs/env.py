@@ -13,6 +13,7 @@ from tlcs.constants import (
     LANE_DISTANCE_TO_CELL,
     LANE_ID_TO_GROUP,
     ROAD_MAX_LENGTH,
+    STATE_SIZE,
     TL_GREEN_TO_YELLOW,
     TRAFFIC_LIGHT_ID,
 )
@@ -31,7 +32,6 @@ class Environment:
 
     def __init__(  # noqa: PLR0913
         self,
-        state_size: int,
         n_cars_generated: int,
         max_steps: int,
         yellow_duration: int,
@@ -43,7 +43,6 @@ class Environment:
         """Initialize the environment.
 
         Args:
-            state_size: Number of cells in the flattened state vector.
             n_cars_generated: Number of cars to generate for the episode.
             max_steps: Maximum number of simulation steps in an episode.
             yellow_duration: Number of steps to hold a yellow phase.
@@ -52,7 +51,6 @@ class Environment:
             sumocfg_file: Path to the SUMO configuration file.
             gui: Whether to use the SUMO GUI binary.
         """
-        self.state_size = state_size
         self.n_cars_generated = n_cars_generated
         self.max_steps = max_steps
         self.yellow_duration = yellow_duration
@@ -146,7 +144,7 @@ class Environment:
         Returns:
             A NumPy array of shape (state_size,) with 0/1 occupancy values.
         """
-        state = np.zeros(self.state_size, dtype=float)
+        state = np.zeros(STATE_SIZE, dtype=float)
 
         for car_id in traci.vehicle.getIDList():
             lane_id = traci.vehicle.getLaneID(car_id)
@@ -160,7 +158,7 @@ class Environment:
 
             car_position = lane_group * CELLS_PER_LANE_GROUP + lane_cell
 
-            if car_position < 0 or car_position >= self.state_size:
+            if car_position < 0 or car_position >= STATE_SIZE:
                 msg = "Out of bounds car position."
                 raise ValueError(msg)
 

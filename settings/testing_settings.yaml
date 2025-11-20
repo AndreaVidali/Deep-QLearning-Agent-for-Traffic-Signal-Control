@@ -8,8 +8,6 @@ green_duration: 10
 turn_chanche: 0.25
 
 # agent
-state_size: 80
-num_actions: 4
 gamma: 0.75
 
 # paths
