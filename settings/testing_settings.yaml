@@ -1,0 +1,14 @@
+# simulation
+gui: true
+max_steps: 5400
+n_cars_generated: 1000
+green_duration: 10
+yellow_duration: 4
+turn_chance: 0.25
+episode_seed: 10000
+
+# agent
+gamma: 0.75
+
+# paths
+sumocfg_file: intersection/sumo_config.sumocfg
