@@ -15,7 +15,7 @@ class TrainingSettings(BaseModel):
     n_cars_generated: PositiveInt
     green_duration: PositiveInt
     yellow_duration: PositiveInt
-    turn_chanche: Annotated[float, Field(ge=0, le=1)]
+    turn_chance: Annotated[float, Field(ge=0, le=1)]
 
     # model
     num_layers: PositiveInt
@@ -56,7 +56,7 @@ class TestingSettings(BaseModel):
     episode_seed: int
     yellow_duration: PositiveInt
     green_duration: PositiveInt
-    turn_chanche: Annotated[float, Field(ge=0, le=1)]
+    turn_chance: Annotated[float, Field(ge=0, le=1)]
 
     # agent
     gamma: Annotated[float, Field(ge=0, le=1)]

@@ -115,7 +115,7 @@ def training_session(settings_file: Path, out_path: Path) -> None:
             max_steps=settings.max_steps,
             yellow_duration=settings.yellow_duration,
             green_duration=settings.green_duration,
-            turn_chance=settings.turn_chanche,
+            turn_chance=settings.turn_chance,
             gui=settings.gui,
             sumocfg_file=settings.sumocfg_file,
         )
@@ -203,7 +203,7 @@ def testing_session(settings_file: Path, model_path: Path, test_name: str) -> No
         max_steps=settings.max_steps,
         yellow_duration=settings.yellow_duration,
         green_duration=settings.green_duration,
-        turn_chance=settings.turn_chanche,
+        turn_chance=settings.turn_chance,
         gui=settings.gui,
         sumocfg_file=settings.sumocfg_file,
     )
